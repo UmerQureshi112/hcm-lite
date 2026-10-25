@@ -1,0 +1,52 @@
+/* css/employees.css
+   Employees page ki khaas styling. Baqi sab css/style.css mein hai. */
+
+/* Payroll ka lamba amount card mein na toote */
+.stat-money {
+  font-size: 1.45rem;
+}
+
+/* Search + filter */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.toolbar .field {
+  min-width: 190px;
+}
+
+/* Table mein employee ka naam + email */
+.emp-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 220px;
+}
+
+.emp-cell strong {
+  display: block;
+  font-size: 0.92rem;
+  line-height: 1.3;
+}
+
+.emp-cell small {
+  display: block;
+  color: var(--muted);
+  font-size: 0.78rem;
+  overflow-wrap: anywhere;
+}
+
+.avatar-sm {
+  width: 36px;
+  height: 36px;
+  font-size: 0.78rem;
+}
+
+@media (max-width: 600px) {
+  .toolbar,
+  .toolbar .field {
+    width: 100%;
+  }
+}

@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HCM Lite | Leave Requests</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../css/style.css" />
+    <link rel="stylesheet" href="../css/leaves.css" />
+
+    <!-- Bina defer ke: pehle storage, phir theme, phir auth (admin guard) -->
+    <script src="../js/storage.js"></script>
+    <script src="../js/theme.js"></script>
+    <script src="../js/auth.js" data-role="admin"></script>
+    <script src="../js/leave.js" defer></script>
+  </head>
+  <body>
+    <!-- leaves.html -->
+
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <span class="brand-logo">H</span>
+          <div>
+            <strong>HCM Lite</strong>
+            <small data-company-name>Company</small>
+          </div>
+        </div>
+
+        <nav class="nav" aria-label="Main menu">
+          <a class="nav-link" href="admin.html"
+            ><span class="nav-icon">📊</span> Dashboard</a
+          >
+          <a class="nav-link" href="employees.html"
+            ><span class="nav-icon">👥</span> Employees</a
+          >
+          <a class="nav-link active" href="leaves.html" aria-current="page"
+            ><span class="nav-icon">📝</span> Leave Requests</a
+          >
+          <a class="nav-link" href="settings.html"
+            ><span class="nav-icon">⚙️</span> Settings</a
+          >
+          <a class="nav-link" href="payslip.html"
+            ><span class="nav-icon">💵</span> Payslips</a
+          >
+        </nav>
+
+        <div class="sidebar-footer">
+          HCM Lite &copy; 2026<br />Data is saved in this browser.
+        </div>
+      </aside>
+
+      <div class="main">
+        <header class="topbar">
+          <div>
+            <h1 class="page-title">Leave Management</h1>
+            <p class="page-sub">
+              Review requests and keep leave balances up to date
+            </p>
+          </div>
+
+          <div class="topbar-actions">
+            <div data-theme-slot></div>
+
+            <div class="user-chip">
+              <span class="avatar" data-user-initials>A</span>
+              <div>
+                <strong data-user-name>Admin</strong>
+                <small data-user-role>Administrator</small>
+              </div>
+            </div>
+
+            <button
+              id="logoutBtn"
+              class="btn btn-secondary btn-sm"
+              type="button"
+            >
+              Logout
+            </button>
+          </div>
+        </header>
+
+        <main class="content">
+          <!-- Summary -->
+          <section class="stats-grid" aria-label="Leave summary">
+            <article class="stat-card" data-tone="warning">
+              <span class="stat-icon">⏳</span>
+              <div>
+                <p class="stat-label">Pending Requests</p>
+                <p class="stat-value" id="pendingCount">0</p>
+              </div>
+            </article>
+
+            <article class="stat-card" data-tone="success">
+              <span class="stat-icon">✅</span>
+              <div>
+                <p class="stat-label">Approved Requests</p>
+                <p class="stat-value" id="approvedCount">0</p>
+              </div>
+            </article>
+
+            <article class="stat-card" data-tone="danger">
+              <span class="stat-icon">❌</span>
+              <div>
+                <p class="stat-label">Rejected Requests</p>
+                <p class="stat-value" id="rejectedCount">0</p>
+              </div>
+            </article>
+          </section>
+
+          <!-- Review card: shuru mein chhupa rehta hai, "Review" dabane par khulta hai -->
+          <section class="card review-card" id="reviewCard" hidden>
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Review Leave Request</h2>
+                <p class="card-sub">
+                  Approving deducts the days from the employee's balance.
+                </p>
+              </div>
+            </div>
+
+            <p class="review-summary" id="reviewSummary"></p>
+
+            <form id="leaveReviewForm" novalidate>
+              <input type="hidden" id="reviewLeaveId" />
+
+              <div class="field">
+                <label for="leaveComment"
+                  >Admin Comment
+                  <span class="muted">(required when rejecting)</span></label
+                >
+                <textarea
+                  id="leaveComment"
+                  placeholder="Write a short comment for the employee"
+                ></textarea>
+              </div>
+
+              <p id="reviewError" class="error-message" role="alert"></p>
+
+              <div class="form-actions">
+                <button
+                  type="submit"
+                  name="decision"
+                  value="approved"
+                  class="btn btn-success"
+                >
+                  Approve
+                </button>
+                <button
+                  type="submit"
+                  name="decision"
+                  value="rejected"
+                  class="btn btn-danger"
+                >
+                  Reject
+                </button>
+                <button
+                  type="button"
+                  id="cancelReviewBtn"
+                  class="btn btn-secondary"
+                >
+                  Close
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <!-- All requests -->
+          <section class="card">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">All Leave Requests</h2>
+                <p class="card-sub">Pending requests are shown first</p>
+              </div>
+
+              <div class="toolbar">
+                <div class="field">
+                  <label class="sr-only" for="leaveStatusFilter"
+                    >Filter by status</label
+                  >
+                  <select id="leaveStatusFilter">
+                    <option value="all">All Requests</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Approved">Approved</option>
+                    <option value="Rejected">Rejected</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="table-wrapper">
+              <table class="leaves-table">
+                <thead>
+                  <tr>
+                    <th>Employee</th>
+                    <th>Type</th>
+                    <th>Dates</th>
+                    <th>Days</th>
+                    <th>Reason</th>
+                    <th>Status</th>
+                    <th>Comment</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="leavesTableBody"></tbody>
+              </table>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>

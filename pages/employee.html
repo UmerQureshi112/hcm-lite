@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HCM Lite | Employee Dashboard</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../css/style.css" />
+    <link rel="stylesheet" href="../css/employee.css" />
+
+    <!-- Bina defer ke: pehle storage, phir theme, phir auth (employee guard) -->
+    <script src="../js/storage.js"></script>
+    <script src="../js/theme.js"></script>
+    <script src="../js/auth.js" data-role="employee"></script>
+
+    <!-- Order zaroori hai: leave.js aur helper.js attendance.js ke functions use karti hain -->
+    <script src="../js/attendance.js" defer></script>
+    <script src="../js/leave.js" defer></script>
+    <script src="../js/helper.js" defer></script>
+  </head>
+  <body>
+    <!-- employee.html -->
+
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <span class="brand-logo">H</span>
+          <div>
+            <strong>HCM Lite</strong>
+            <small data-company-name>Company</small>
+          </div>
+        </div>
+
+        <nav class="nav" aria-label="Main menu">
+          <a class="nav-link active" href="employee.html" aria-current="page"
+            ><span class="nav-icon">🏠</span> My Dashboard</a
+          >
+          <a class="nav-link" href="payslip.html"
+            ><span class="nav-icon">💵</span> My Payslip</a
+          >
+        </nav>
+
+        <div class="sidebar-footer">
+          HCM Lite &copy; 2026<br />Data is saved in this browser.
+        </div>
+      </aside>
+
+      <div class="main">
+        <header class="topbar">
+          <div>
+            <h1 class="page-title">Employee Dashboard</h1>
+            <p class="page-sub">Attendance, leaves and salary in one place</p>
+          </div>
+
+          <div class="topbar-actions">
+            <div data-theme-slot></div>
+
+            <div class="user-chip">
+              <span class="avatar" data-user-initials>E</span>
+              <div>
+                <strong data-user-name>Employee</strong>
+                <small data-user-role>Employee</small>
+              </div>
+            </div>
+
+            <button
+              id="logoutBtn"
+              class="btn btn-secondary btn-sm"
+              type="button"
+            >
+              Logout
+            </button>
+          </div>
+        </header>
+
+        <main class="content">
+          <!-- Welcome banner -->
+          <section class="welcome-card">
+            <div>
+              <h2>Hello, <span data-user-name>Employee</span> 👋</h2>
+              <p id="todayDate">Today</p>
+            </div>
+
+            <div class="clock" id="liveClock" aria-label="Current time">
+              --:--:--
+            </div>
+          </section>
+
+          <!-- Is mahine ka summary -->
+          <section class="stats-grid" aria-label="This month">
+            <article class="stat-card" data-tone="success">
+              <span class="stat-icon">✅</span>
+              <div>
+                <p class="stat-label">Present (this month)</p>
+                <p class="stat-value" id="monthPresent">0</p>
+              </div>
+            </article>
+
+            <article class="stat-card" data-tone="warning">
+              <span class="stat-icon">⏰</span>
+              <div>
+                <p class="stat-label">Late</p>
+                <p class="stat-value" id="monthLate">0</p>
+              </div>
+            </article>
+
+            <article class="stat-card" data-tone="info">
+              <span class="stat-icon">🌓</span>
+              <div>
+                <p class="stat-label">Half Days</p>
+                <p class="stat-value" id="monthHalfDay">0</p>
+              </div>
+            </article>
+
+            <article class="stat-card" data-tone="danger">
+              <span class="stat-icon">❌</span>
+              <div>
+                <p class="stat-label">Absent</p>
+                <p class="stat-value" id="monthAbsent">0</p>
+              </div>
+            </article>
+          </section>
+
+          <div class="grid-main">
+            <!-- Left column -->
+            <div class="main-stack">
+              <section class="card">
+                <div class="card-header">
+                  <div>
+                    <h2 class="card-title">My Attendance Today</h2>
+                    <p class="card-sub">
+                      Check in when you start and check out when you finish
+                    </p>
+                  </div>
+                </div>
+
+                <div class="time-tiles">
+                  <div class="time-tile">
+                    <span>Check In</span>
+                    <strong id="myCheckIn">--:--</strong>
+                  </div>
+
+                  <div class="time-tile">
+                    <span>Check Out</span>
+                    <strong id="myCheckOut">--:--</strong>
+                  </div>
+
+                  <div class="time-tile">
+                    <span>Work Hours</span>
+                    <strong id="myWorkHours">-</strong>
+                  </div>
+                </div>
+
+                <p class="today-status">
+                  Status: <span id="myAttendanceStatus">Not checked in</span>
+                </p>
+
+                <div class="form-actions">
+                  <button id="checkInBtn" class="btn btn-primary" type="button">
+                    Check In
+                  </button>
+                  <button
+                    id="checkOutBtn"
+                    class="btn btn-secondary"
+                    type="button"
+                  >
+                    Check Out
+                  </button>
+                </div>
+              </section>
+
+              <section class="card">
+                <div class="card-header">
+                  <div>
+                    <h2 class="card-title">Apply for Leave</h2>
+                    <p class="card-sub">
+                      Only your company's working days are counted
+                    </p>
+                  </div>
+                </div>
+
+                <form id="leaveForm" novalidate>
+                  <div class="form-grid">
+                    <div class="field full">
+                      <label for="leaveType">Leave Type</label>
+                      <select id="leaveType" required>
+                        <option value="">Select Leave Type</option>
+                        <option value="casual">Casual Leave</option>
+                        <option value="sick">Sick Leave</option>
+                        <option value="annual">Annual Leave</option>
+                      </select>
+                    </div>
+
+                    <div class="field">
+                      <label for="leaveFrom">From Date</label>
+                      <input id="leaveFrom" type="date" required />
+                    </div>
+
+                    <div class="field">
+                      <label for="leaveTo">To Date</label>
+                      <input id="leaveTo" type="date" required />
+                    </div>
+
+                    <div class="field full">
+                      <label for="leaveReason">Reason</label>
+                      <textarea
+                        id="leaveReason"
+                        placeholder="Why do you need this leave?"
+                        required
+                      ></textarea>
+                    </div>
+
+                    <div class="full">
+                      <p
+                        id="leaveDaysPreview"
+                        class="form-message success"
+                        role="status"
+                      ></p>
+                      <p id="leaveError" class="error-message" role="alert"></p>
+                    </div>
+
+                    <div class="full form-actions">
+                      <button type="submit" class="btn btn-primary">
+                        Apply for Leave
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              </section>
+
+              <section class="card">
+                <div class="card-header">
+                  <div>
+                    <h2 class="card-title">My Leave Requests</h2>
+                    <p class="card-sub">
+                      You can cancel a request while it is pending
+                    </p>
+                  </div>
+                </div>
+
+                <div class="table-wrapper">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Type</th>
+                        <th>Dates</th>
+                        <th>Days</th>
+                        <th>Status</th>
+                        <th>Comment</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody id="myLeavesBody"></tbody>
+                  </table>
+                </div>
+              </section>
+
+              <section class="card">
+                <div class="card-header">
+                  <div>
+                    <h2 class="card-title">My Attendance History</h2>
+                    <p class="card-sub">Newest first</p>
+                  </div>
+                </div>
+
+                <div class="table-wrapper">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Check In</th>
+                        <th>Check Out</th>
+                        <th>Work Hours</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody id="myAttendanceBody"></tbody>
+                  </table>
+                </div>
+              </section>
+            </div>
+
+            <!-- Right column -->
+            <div class="side-stack">
+              <section class="card">
+                <div class="card-header">
+                  <div>
+                    <h2 class="card-title">My Leave Balance</h2>
+                    <p class="card-sub">For this year</p>
+                  </div>
+                </div>
+
+                <p class="balance-number">
+                  <span id="leaveBalance">0</span>
+                  <small>days left</small>
+                </p>
+
+                <div class="progress" aria-hidden="true">
+                  <div class="progress-bar" id="leaveBalanceBar"></div>
+                </div>
+
+                <div class="balance-stats">
+                  <div>
+                    <strong id="leaveQuota">0</strong>
+                    <span>Quota</span>
+                  </div>
+
+                  <div>
+                    <strong id="leaveUsed">0</strong>
+                    <span>Used</span>
+                  </div>
+
+                  <div>
+                    <strong id="leavePendingDays">0</strong>
+                    <span>Pending</span>
+                  </div>
+                </div>
+              </section>
+
+              <section class="card">
+                <h2 class="card-title">My Payslip</h2>
+                <p class="card-sub payslip-text">
+                  View your monthly salary, deductions and net pay.
+                </p>
+                <a class="btn btn-primary btn-block" href="payslip.html"
+                  >Open Payslip</a
+                >
+              </section>
+
+              <section class="card">
+                <div class="card-header">
+                  <div>
+                    <h2 class="card-title">Smart Helper</h2>
+                    <p class="card-sub">Answers from your own data</p>
+                  </div>
+                </div>
+
+                <div class="quick-questions">
+                  <button
+                    type="button"
+                    class="btn btn-secondary btn-sm"
+                    data-helper-question="Today's attendance"
+                  >
+                    Attendance
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-secondary btn-sm"
+                    data-helper-question="Leave balance"
+                  >
+                    Leave balance
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-secondary btn-sm"
+                    data-helper-question="My salary"
+                  >
+                    Salary
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-secondary btn-sm"
+                    data-helper-question="Office timings"
+                  >
+                    Timings
+                  </button>
+                </div>
+
+                <div
+                  id="helperMessages"
+                  class="chat-messages"
+                  aria-live="polite"
+                ></div>
+
+                <form id="helperForm" class="chat-form">
+                  <label class="sr-only" for="helperQuestion"
+                    >Ask a question</label
+                  >
+                  <input
+                    id="helperQuestion"
+                    type="text"
+                    autocomplete="off"
+                    placeholder="Ask about leaves, salary..."
+                    required
+                  />
+                  <button type="submit" class="btn btn-primary">Ask</button>
+                </form>
+              </section>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>
