@@ -1,238 +1,190 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>HCM Lite | Settings</title>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HCM Lite | Settings</title>
 
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
-      rel="stylesheet"
-    />
-    <link rel="stylesheet" href="../css/style.css" />
-    <link rel="stylesheet" href="../css/setting.css" />
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/setting.css">
 
-    <!-- Bina defer ke: pehle storage, phir theme, phir auth (admin guard) -->
-    <script src="../js/storage.js"></script>
-    <script src="../js/theme.js"></script>
-    <script src="../js/auth.js" data-role="admin"></script>
-    <script src="../js/settings.js" defer></script>
-  </head>
-  <body>
-    <!-- settings.html -->
+  <script src="../js/storage.js"></script>
+  <script src="../js/auth.js" data-role="admin"></script>
+  <script src="../js/theme.js" defer></script>
+  <script src="../js/settings.js" defer></script>
+</head>
 
-    <div class="app">
-      <aside class="sidebar">
-        <div class="brand">
-          <span class="brand-logo">H</span>
-          <div>
-            <strong>HCM Lite</strong>
-            <small data-company-name>Company</small>
-          </div>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon">H</div>
+        <span>HCM Lite</span>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a href="admin.html" class="nav-link">
+          <span>▦</span> Dashboard
+        </a>
+        <a href="employees.html" class="nav-link">
+          <span>♙</span> Employees
+        </a>
+        <a href="leaves.html" class="nav-link">
+          <span>▣</span> Leave Management
+        </a>
+        <a href="payslip.html" class="nav-link">
+          <span>▤</span> Payroll
+        </a>
+        <a href="settings.html" class="nav-link active">
+          <span>⚙</span> Settings
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button id="themeToggle" class="nav-link" type="button">
+          <span>◐</span> Toggle Theme
+        </button>
+        <button id="logoutBtn" class="nav-link" type="button">
+          <span>↪</span> Logout
+        </button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <div>
+          <h1>Settings</h1>
+          <p class="muted">Configure your HCM Lite workspace.</p>
         </div>
+      </header>
 
-        <nav class="nav" aria-label="Main menu">
-          <a class="nav-link" href="admin.html"
-            ><span class="nav-icon">📊</span> Dashboard</a
-          >
-          <a class="nav-link" href="employees.html"
-            ><span class="nav-icon">👥</span> Employees</a
-          >
-          <a class="nav-link" href="leaves.html"
-            ><span class="nav-icon">📝</span> Leave Requests</a
-          >
-          <a class="nav-link active" href="settings.html" aria-current="page"
-            ><span class="nav-icon">⚙️</span> Settings</a
-          >
-          <a class="nav-link" href="payslip.html"
-            ><span class="nav-icon">💵</span> Payslips</a
-          >
-        </nav>
+      <section class="card">
+        <h2>Company Settings</h2>
+        <p class="muted">Update your company information and work rules.</p>
 
-        <div class="sidebar-footer">
-          HCM Lite &copy; 2026<br />Data is saved in this browser.
-        </div>
-      </aside>
-
-      <div class="main">
-        <header class="topbar">
-          <div>
-            <h1 class="page-title">Company Settings</h1>
-            <p class="page-sub">
-              Office timings, attendance rules and leave quota
-            </p>
-          </div>
-
-          <div class="topbar-actions">
-            <div data-theme-slot></div>
-
-            <div class="user-chip">
-              <span class="avatar" data-user-initials>A</span>
-              <div>
-                <strong data-user-name>Admin</strong>
-                <small data-user-role>Administrator</small>
-              </div>
+        <form id="settingsForm">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="settingsCompanyName">Company Name</label>
+              <input
+                id="settingsCompanyName"
+                name="companyName"
+                type="text"
+                placeholder="Enter company name"
+                required
+              >
             </div>
 
-            <button
-              id="logoutBtn"
-              class="btn btn-secondary btn-sm"
-              type="button"
-            >
-              Logout
+            <div class="form-group">
+              <label for="officeStartTime">Office Start Time</label>
+              <input
+                id="officeStartTime"
+                name="officeStartTime"
+                type="time"
+                required
+              >
+            </div>
+
+            <div class="form-group">
+              <label for="graceMinutes">Grace Period (minutes)</label>
+              <input
+                id="graceMinutes"
+                name="graceMinutes"
+                type="number"
+                min="0"
+                step="1"
+                required
+              >
+            </div>
+
+            <div class="form-group">
+              <label for="halfDayMinutes">Half-Day Threshold (minutes)</label>
+              <input
+                id="halfDayMinutes"
+                name="halfDayMinutes"
+                type="number"
+                min="1"
+                step="1"
+                required
+              >
+            </div>
+
+            <div class="form-group">
+              <label for="leaveQuota">Annual Leave Quota (days)</label>
+              <input
+                id="leaveQuota"
+                name="leaveQuota"
+                type="number"
+                min="0"
+                step="1"
+                required
+              >
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Working Days</label>
+            <div class="working-days">
+              <label><input type="checkbox" name="workingDays" value="1"> Monday</label>
+              <label><input type="checkbox" name="workingDays" value="2"> Tuesday</label>
+              <label><input type="checkbox" name="workingDays" value="3"> Wednesday</label>
+              <label><input type="checkbox" name="workingDays" value="4"> Thursday</label>
+              <label><input type="checkbox" name="workingDays" value="5"> Friday</label>
+              <label><input type="checkbox" name="workingDays" value="6"> Saturday</label>
+              <label><input type="checkbox" name="workingDays" value="0"> Sunday</label>
+            </div>
+          </div>
+
+          <p id="settingsError" role="alert" class="error-message"></p>
+          <p id="settingsMessage" role="status"></p>
+
+          <div class="form-actions">
+            <button class="btn btn-primary" type="submit">
+              Save Settings
             </button>
           </div>
-        </header>
+        </form>
+      </section>
 
-        <main class="content">
-          <div class="grid-main">
-            <section class="card">
-              <div class="card-header">
-                <div>
-                  <h2 class="card-title">Company Information</h2>
-                  <p class="card-sub">
-                    These rules are used for attendance, leave and payslips.
-                  </p>
-                </div>
-              </div>
+      <section class="card">
+        <h2>Work Rules Preview</h2>
+        <p class="muted">Preview updates as you change the settings.</p>
 
-              <form id="settingsForm" novalidate>
-                <div class="form-grid">
-                  <div class="field full">
-                    <label for="settingsCompanyName">Company Name</label>
-                    <input id="settingsCompanyName" type="text" required />
-                  </div>
-
-                  <div class="field">
-                    <label for="officeStartTime">Office Start Time</label>
-                    <input id="officeStartTime" type="time" required />
-                  </div>
-
-                  <div class="field">
-                    <label for="graceMinutes">Grace Minutes</label>
-                    <input
-                      id="graceMinutes"
-                      type="number"
-                      min="0"
-                      step="1"
-                      required
-                    />
-                  </div>
-
-                  <div class="field">
-                    <label for="halfDayMinutes">Half Day After (minutes)</label>
-                    <input
-                      id="halfDayMinutes"
-                      type="number"
-                      min="1"
-                      step="1"
-                      required
-                    />
-                  </div>
-
-                  <div class="field">
-                    <label for="leaveQuota">Yearly Leave Quota (days)</label>
-                    <input
-                      id="leaveQuota"
-                      type="number"
-                      min="0"
-                      step="1"
-                      required
-                    />
-                  </div>
-
-                  <fieldset class="field full days-fieldset">
-                    <legend>Working Days</legend>
-
-                    <div class="days-grid">
-                      <label class="day-chip"
-                        ><input type="checkbox" name="workingDays" value="1" />
-                        Monday</label
-                      >
-                      <label class="day-chip"
-                        ><input type="checkbox" name="workingDays" value="2" />
-                        Tuesday</label
-                      >
-                      <label class="day-chip"
-                        ><input type="checkbox" name="workingDays" value="3" />
-                        Wednesday</label
-                      >
-                      <label class="day-chip"
-                        ><input type="checkbox" name="workingDays" value="4" />
-                        Thursday</label
-                      >
-                      <label class="day-chip"
-                        ><input type="checkbox" name="workingDays" value="5" />
-                        Friday</label
-                      >
-                      <label class="day-chip"
-                        ><input type="checkbox" name="workingDays" value="6" />
-                        Saturday</label
-                      >
-                      <label class="day-chip"
-                        ><input type="checkbox" name="workingDays" value="0" />
-                        Sunday</label
-                      >
-                    </div>
-                  </fieldset>
-
-                  <div class="full">
-                    <p
-                      id="settingsError"
-                      class="error-message"
-                      role="alert"
-                    ></p>
-                    <p
-                      id="settingsMessage"
-                      class="form-message"
-                      role="status"
-                    ></p>
-                  </div>
-
-                  <div class="full form-actions">
-                    <button type="submit" class="btn btn-primary">
-                      Save Settings
-                    </button>
-                  </div>
-                </div>
-              </form>
-            </section>
-
-            <aside class="card rules-card">
-              <h2 class="card-title">Attendance Rules</h2>
-              <p class="card-sub">Based on your current values</p>
-
-              <ul class="rule-list">
-                <li>
-                  <span class="badge badge-success">Present</span>
-                  <span
-                    >Check in up to
-                    <strong id="rulePresent">--:--</strong></span
-                  >
-                </li>
-                <li>
-                  <span class="badge badge-warning">Late</span>
-                  <span
-                    >Check in up to <strong id="ruleLate">--:--</strong></span
-                  >
-                </li>
-                <li>
-                  <span class="badge badge-danger">Half Day</span>
-                  <span
-                    >Check in after <strong id="ruleHalf">--:--</strong></span
-                  >
-                </li>
-              </ul>
-
-              <p class="rule-note">
-                Working days selected: <strong id="ruleDays">0</strong> per week
-              </p>
-            </aside>
+        <div class="form-grid">
+          <div class="form-group">
+            <span class="muted">Present From</span>
+            <h3 id="rulePresent">09:15</h3>
           </div>
-        </main>
-      </div>
-    </div>
-  </body>
+
+          <div class="form-group">
+            <span class="muted">Late After</span>
+            <h3 id="ruleLate">11:00</h3>
+          </div>
+
+          <div class="form-group">
+            <span class="muted">Half-Day Threshold</span>
+            <h3 id="ruleHalf">11:00</h3>
+          </div>
+
+          <div class="form-group">
+            <span class="muted">Working Days Selected</span>
+            <h3 id="ruleDays">5</h3>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Appearance</h2>
+        <p class="muted">Change the app's display theme.</p>
+        <button
+          id="themeToggleSettings"
+          class="btn btn-secondary"
+          type="button"
+        >
+          Toggle Light / Dark Theme
+        </button>
+      </section>
+    </main>
+  </div>
+</body>
 </html>

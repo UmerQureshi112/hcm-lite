@@ -1,12 +1,14 @@
 /* css/leaves.css
-   Leave Requests page ki khaas styling. Baqi sab css/style.css mein hai. */
+   Leave Requests page ki khaas styling.
+   Baqi sab css/style.css mein hai.
+*/
 
 /* Table zyada columns ki wajah se chaudi hai, phone par side mein scroll hoti hai */
 .leaves-table {
   min-width: 960px;
 }
 
-/* Reason aur Comment lambe ho sakte hain, ye columns neeche ki taraf wrap honge */
+/* Reason aur Comment lambe ho sakte hain, ye columns wrap honge */
 .leaves-table td:nth-child(5),
 .leaves-table td:nth-child(7) {
   min-width: 170px;

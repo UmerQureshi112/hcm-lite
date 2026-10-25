@@ -1,9 +1,7 @@
-// js/leave.js
-// Leave requests: employee apply/cancel, balance, aur admin ka approve/reject.
-// Ye script employee.html, leaves.html aur admin.html par load hoti hai.
 
 /* =========================================================
-   Shared functions (helper.js bhi inhe use kar sakti hai)
+   HCM Lite - Leave Management
+   Works with employee.html, leaves.html and admin.html
    ========================================================= */
 
 const LEAVE_TYPES = {
@@ -19,37 +17,45 @@ const LEAVE_BADGES = {
 };
 
 function formatLeaveType(type) {
-  return LEAVE_TYPES[type] || type;
+  return LEAVE_TYPES[type] || type || "Leave";
 }
 
 function createLeaveBadge(status) {
   const badge = document.createElement("span");
   badge.className = `badge ${LEAVE_BADGES[status] || "badge-muted"}`;
-  badge.textContent = status;
+  badge.textContent = status || "Pending";
   return badge;
 }
 
-// Request ke working days. Request banate waqt save ho jate hain,
-// taake baad mein settings badlne se purane records na badlein.
 function getLeaveDays(leave) {
-  return Number(leave.days ?? countWorkingDays(leave.from, leave.to));
+  const savedDays = Number(leave.days);
+
+  if (Number.isFinite(savedDays) && savedDays > 0) {
+    return savedDays;
+  }
+
+  return countWorkingDays(leave.from, leave.to);
 }
 
 function formatLeavePeriod(leave) {
+  if (!leave.from || !leave.to) return "—";
+
   return leave.from === leave.to
     ? formatDate(leave.from)
     : `${formatDate(leave.from)} → ${formatDate(leave.to)}`;
 }
 
-// Employee ka saal bhar ka balance
 function getLeaveBalance(employeeId, year = new Date().getFullYear()) {
-  const quota = Number(getSettings().leaveQuota);
+  const settings = getSettings() || {};
+  const quota = Math.max(0, Number(settings.leaveQuota) || 0);
 
-  const mine = getLeaves().filter(
-    (leave) =>
+  const mine = getLeaves().filter((leave) => {
+    return (
       String(leave.employeeId) === String(employeeId) &&
-      leave.from.startsWith(String(year)),
-  );
+      leave.from &&
+      leave.from.startsWith(String(year))
+    );
+  });
 
   const sumDays = (status) =>
     mine
@@ -64,18 +70,18 @@ function getLeaveBalance(employeeId, year = new Date().getFullYear()) {
     used,
     pending,
     remaining: Math.max(quota - used, 0),
-    available: Math.max(quota - used - pending, 0), // pending ke baad jitne din request ho sakte hain
+    available: Math.max(quota - used - pending, 0),
   };
 }
 
 /* =========================================================
-   Page ka kaam
+   Page setup
    ========================================================= */
 
 document.addEventListener("DOMContentLoaded", () => {
   const user = getCurrentUser();
 
-  // Employee dashboard
+  // Employee leave form (if present on the page)
   const leaveForm = document.getElementById("leaveForm");
   const leaveType = document.getElementById("leaveType");
   const leaveFrom = document.getElementById("leaveFrom");
@@ -83,7 +89,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const leaveReason = document.getElementById("leaveReason");
   const leaveError = document.getElementById("leaveError");
   const leaveDaysPreview = document.getElementById("leaveDaysPreview");
-  const myLeavesBody = document.getElementById("myLeavesBody");
+
+  // Employee dashboard
+  const myLeavesBody =
+    document.getElementById("myLeaveTable") ||
+    document.getElementById("myLeavesBody");
 
   const leaveBalanceEl = document.getElementById("leaveBalance");
   const leaveQuotaEl = document.getElementById("leaveQuota");
@@ -91,7 +101,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const leavePendingEl = document.getElementById("leavePendingDays");
   const leaveBalanceBar = document.getElementById("leaveBalanceBar");
 
-  // Admin leaves page
+  // Admin leave management
   const leavesTableBody = document.getElementById("leavesTableBody");
   const pendingCount = document.getElementById("pendingCount");
   const approvedCount = document.getElementById("approvedCount");
@@ -106,8 +116,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const leaveComment = document.getElementById("leaveComment");
   const cancelReviewBtn = document.getElementById("cancelReviewBtn");
 
-  // Admin dashboard
-  const pendingLeavesBox = document.getElementById("pendingLeaves");
+  // Admin dashboard: support both IDs
+  const pendingLeavesBox =
+    document.getElementById("pendingLeavesList") ||
+    document.getElementById("pendingLeaves");
 
   function createCell(content) {
     const cell = document.createElement("td");
@@ -121,14 +133,14 @@ document.addEventListener("DOMContentLoaded", () => {
     return cell;
   }
 
-  function createEmptyRow(text, columns) {
+  function createEmptyRow(message, columns) {
     const row = document.createElement("tr");
     row.className = "empty-row";
 
-    const cell = createCell(text);
+    const cell = createCell(message);
     cell.colSpan = columns;
-
     row.appendChild(cell);
+
     return row;
   }
 
@@ -136,33 +148,43 @@ document.addEventListener("DOMContentLoaded", () => {
     if (leaveError) leaveError.textContent = message;
   }
 
-  /* =======================================================
-     EMPLOYEE: apply, cancel aur history
-     ======================================================= */
+  function showReviewError(message = "") {
+    if (reviewError) reviewError.textContent = message;
+  }
+
+  /* =========================================================
+     Employee: date preview and leave application
+     ========================================================= */
 
   function updateDatePreview() {
-    if (!leaveDaysPreview) return;
+    if (!leaveDaysPreview || !leaveFrom || !leaveTo) return;
 
-    if (!leaveFrom.value || !leaveTo.value || leaveTo.value < leaveFrom.value) {
+    if (
+      !leaveFrom.value ||
+      !leaveTo.value ||
+      leaveTo.value < leaveFrom.value
+    ) {
       leaveDaysPreview.textContent = "";
       return;
     }
 
     const days = countWorkingDays(leaveFrom.value, leaveTo.value);
-    leaveDaysPreview.textContent = `${days} working day${days === 1 ? "" : "s"} selected`;
+
+    leaveDaysPreview.textContent =
+      `${days} working day${days === 1 ? "" : "s"} selected`;
   }
 
   function setupDateInputs() {
     if (!leaveFrom || !leaveTo) return;
 
     const today = getToday();
+
     leaveFrom.min = today;
     leaveTo.min = today;
 
     leaveFrom.addEventListener("change", () => {
       leaveTo.min = leaveFrom.value || today;
 
-      // "To" date "From" se pehle ho to usse barabar kar do
       if (leaveTo.value && leaveTo.value < leaveFrom.value) {
         leaveTo.value = leaveFrom.value;
       }
@@ -179,6 +201,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (!user || user.role !== "employee") {
       showLeaveError("Please log in as an employee.");
+      return;
+    }
+
+    if (!leaveType || !leaveFrom || !leaveTo || !leaveReason) {
+      showLeaveError("The leave form is missing required fields.");
       return;
     }
 
@@ -204,35 +231,37 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const days = countWorkingDays(from, to);
 
-    if (days === 0) {
+    if (days < 1) {
       showLeaveError("The selected dates have no working days.");
       return;
     }
 
     const leaves = getLeaves();
 
-    const overlapping = leaves.some(
-      (leave) =>
+    const overlapping = leaves.some((leave) => {
+      return (
         String(leave.employeeId) === String(user.id) &&
         leave.status !== "Rejected" &&
         from <= leave.to &&
-        to >= leave.from,
-    );
+        to >= leave.from
+      );
+    });
 
     if (overlapping) {
       showLeaveError(
-        "You already have a pending or approved leave on these dates.",
+        "You already have a pending or approved leave on these dates."
       );
       return;
     }
 
-    const balance = getLeaveBalance(user.id, Number(from.slice(0, 4)));
+    const balance = getLeaveBalance(
+      user.id,
+      Number(from.slice(0, 4))
+    );
 
     if (days > balance.available) {
       showLeaveError(
-        balance.pending > 0
-          ? `You can request only ${balance.available} more day(s). ${balance.pending} day(s) are already waiting for approval.`
-          : `You only have ${balance.available} leave day(s) left.`,
+        `You can request only ${balance.available} more day(s).`
       );
       return;
     }
@@ -240,7 +269,7 @@ document.addEventListener("DOMContentLoaded", () => {
     leaves.push({
       id: generateId(),
       employeeId: user.id,
-      employeeName: user.name,
+      employeeName: user.name || user.fullName || "Employee",
       type,
       from,
       to,
@@ -258,19 +287,28 @@ document.addEventListener("DOMContentLoaded", () => {
 
     leaveForm.reset();
     updateDatePreview();
+
     showToast("Leave request submitted", "success");
     renderAll();
   }
 
   function cancelLeave(leave) {
+    if (!leave || leave.status !== "Pending") return;
+
     if (!confirm("Cancel this leave request?")) return;
 
-    const remaining = getLeaves().filter(
-      (item) =>
-        !(String(item.id) === String(leave.id) && item.status === "Pending"),
-    );
+    const remaining = getLeaves().filter((item) => {
+      return !(
+        String(item.id) === String(leave.id) &&
+        item.status === "Pending"
+      );
+    });
 
-    saveData(STORAGE_KEYS.leaves, remaining);
+    if (!saveData(STORAGE_KEYS.leaves, remaining)) {
+      showToast("Could not cancel the leave request", "error");
+      return;
+    }
+
     showToast("Leave request cancelled", "success");
     renderAll();
   }
@@ -281,14 +319,19 @@ document.addEventListener("DOMContentLoaded", () => {
     const balance = getLeaveBalance(user.id);
 
     leaveBalanceEl.textContent = balance.remaining;
+
     if (leaveQuotaEl) leaveQuotaEl.textContent = balance.quota;
     if (leaveUsedEl) leaveUsedEl.textContent = balance.used;
     if (leavePendingEl) leavePendingEl.textContent = balance.pending;
 
     if (leaveBalanceBar) {
       const percent =
-        balance.quota > 0 ? (balance.remaining / balance.quota) * 100 : 0;
+        balance.quota > 0
+          ? (balance.remaining / balance.quota) * 100
+          : 0;
+
       leaveBalanceBar.style.width = `${percent}%`;
+      leaveBalanceBar.setAttribute("aria-valuenow", String(percent));
     }
   }
 
@@ -296,14 +339,17 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!myLeavesBody || !user || user.role !== "employee") return;
 
     const mine = getLeaves()
-      .filter((leave) => String(leave.employeeId) === String(user.id))
-      .sort((a, b) => b.from.localeCompare(a.from));
+      .filter(
+        (leave) => String(leave.employeeId) === String(user.id)
+      )
+      .sort((a, b) => (b.from || "").localeCompare(a.from || ""));
 
     myLeavesBody.innerHTML = "";
 
     if (mine.length === 0) {
+      // Employee dashboard table has five columns
       myLeavesBody.appendChild(
-        createEmptyRow("You have not requested any leave yet.", 6),
+        createEmptyRow("You have not requested any leave yet.", 5)
       );
       return;
     }
@@ -311,60 +357,62 @@ document.addEventListener("DOMContentLoaded", () => {
     mine.forEach((leave) => {
       const row = document.createElement("tr");
 
-      let action = "-";
-
-      if (leave.status === "Pending") {
-        action = document.createElement("button");
-        action.type = "button";
-        action.className = "btn btn-secondary btn-sm";
-        action.textContent = "Cancel";
-        action.addEventListener("click", () => cancelLeave(leave));
-      }
-
       row.append(
         createCell(formatLeaveType(leave.type)),
-        createCell(formatLeavePeriod(leave)),
+        createCell(leave.from ? formatDate(leave.from) : "—"),
+        createCell(leave.to ? formatDate(leave.to) : "—"),
         createCell(getLeaveDays(leave)),
-        createCell(createLeaveBadge(leave.status)),
-        createCell(leave.comment || "-"),
-        createCell(action),
+        createCell(createLeaveBadge(leave.status))
       );
 
       myLeavesBody.appendChild(row);
     });
   }
 
-  /* =======================================================
-     ADMIN: table, review aur dashboard list
-     ======================================================= */
+  /* =========================================================
+     Admin: leave table and review form
+     ========================================================= */
 
   function openReview(leave) {
     if (!reviewCard || !reviewForm) return;
 
     const balance = getLeaveBalance(
       leave.employeeId,
-      Number(leave.from.slice(0, 4)),
+      Number((leave.from || "").slice(0, 4)) ||
+        new Date().getFullYear()
     );
 
-    reviewLeaveId.value = leave.id;
-    reviewSummary.textContent =
-      `${leave.employeeName} · ${formatLeaveType(leave.type)} · ${formatLeavePeriod(leave)} ` +
-      `(${getLeaveDays(leave)} day${getLeaveDays(leave) === 1 ? "" : "s"}). ` +
-      `Reason: ${leave.reason}. Balance left: ${balance.remaining} of ${balance.quota} days.`;
+    if (reviewLeaveId) reviewLeaveId.value = leave.id;
 
-    leaveComment.value = "";
-    reviewError.textContent = "";
+    if (reviewSummary) {
+      reviewSummary.textContent =
+        `${leave.employeeName || "Employee"} · ` +
+        `${formatLeaveType(leave.type)} · ` +
+        `${formatLeavePeriod(leave)} · ` +
+        `${getLeaveDays(leave)} day(s). ` +
+        `Reason: ${leave.reason || "Not provided"}. ` +
+        `Balance left: ${balance.remaining} of ${balance.quota} days.`;
+    }
+
+    if (leaveComment) leaveComment.value = "";
+    showReviewError("");
+
     reviewCard.hidden = false;
-    reviewCard.scrollIntoView({ behavior: "smooth", block: "center" });
-    leaveComment.focus();
+    reviewCard.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+
+    if (leaveComment) leaveComment.focus();
   }
 
   function closeReview() {
     if (!reviewCard) return;
 
-    reviewForm.reset();
-    reviewLeaveId.value = "";
-    reviewError.textContent = "";
+    if (reviewForm) reviewForm.reset();
+    if (reviewLeaveId) reviewLeaveId.value = "";
+
+    showReviewError("");
     reviewCard.hidden = true;
   }
 
@@ -373,27 +421,34 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const leaves = getLeaves();
 
-    if (pendingCount)
+    if (pendingCount) {
       pendingCount.textContent = leaves.filter(
-        (l) => l.status === "Pending",
+        (leave) => leave.status === "Pending"
       ).length;
-    if (approvedCount)
+    }
+
+    if (approvedCount) {
       approvedCount.textContent = leaves.filter(
-        (l) => l.status === "Approved",
+        (leave) => leave.status === "Approved"
       ).length;
-    if (rejectedCount)
+    }
+
+    if (rejectedCount) {
       rejectedCount.textContent = leaves.filter(
-        (l) => l.status === "Rejected",
+        (leave) => leave.status === "Rejected"
       ).length;
+    }
 
     const selected = statusFilter?.value || "all";
 
-    // Pending sab se upar, phir nayi requests pehle
     const filtered = leaves
-      .filter((leave) => selected === "all" || leave.status === selected)
+      .filter(
+        (leave) => selected === "all" || leave.status === selected
+      )
       .sort((a, b) => {
         if (a.status === "Pending" && b.status !== "Pending") return -1;
         if (b.status === "Pending" && a.status !== "Pending") return 1;
+
         return (b.createdAt || "").localeCompare(a.createdAt || "");
       });
 
@@ -401,7 +456,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (filtered.length === 0) {
       leavesTableBody.appendChild(
-        createEmptyRow("No leave requests found.", 8),
+        createEmptyRow("No leave requests found.", 8)
       );
       return;
     }
@@ -420,14 +475,14 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       row.append(
-        createCell(leave.employeeName),
+        createCell(leave.employeeName || "Employee"),
         createCell(formatLeaveType(leave.type)),
         createCell(formatLeavePeriod(leave)),
         createCell(getLeaveDays(leave)),
-        createCell(leave.reason),
+        createCell(leave.reason || "—"),
         createCell(createLeaveBadge(leave.status)),
-        createCell(leave.comment || "-"),
-        createCell(action),
+        createCell(leave.comment || "—"),
+        createCell(action)
       );
 
       leavesTableBody.appendChild(row);
@@ -436,78 +491,95 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function submitReview(event) {
     event.preventDefault();
-    reviewError.textContent = "";
+    showReviewError("");
 
     if (!user || user.role !== "admin") {
-      reviewError.textContent = "Only an admin can review leave requests.";
+      showReviewError("Only an admin can review leave requests.");
       return;
     }
 
     const decision = event.submitter?.value;
 
     if (decision !== "approved" && decision !== "rejected") {
-      reviewError.textContent = "Please choose Approve or Reject.";
+      showReviewError("Please choose Approve or Reject.");
       return;
     }
 
-    const comment = leaveComment.value.trim();
+    const comment = leaveComment?.value.trim() || "";
 
     if (decision === "rejected" && !comment) {
-      reviewError.textContent =
-        "Please add a comment explaining the rejection.";
+      showReviewError(
+        "Please add a comment explaining the rejection."
+      );
       return;
     }
 
     const leaves = getLeaves();
+
     const leave = leaves.find(
-      (item) => String(item.id) === String(reviewLeaveId.value),
+      (item) =>
+        String(item.id) === String(reviewLeaveId?.value || "")
     );
 
     if (!leave) {
-      reviewError.textContent = "Leave request not found.";
+      showReviewError("Leave request not found.");
       return;
     }
 
     if (leave.status !== "Pending") {
-      reviewError.textContent = "This request has already been reviewed.";
+      showReviewError("This request has already been reviewed.");
       return;
     }
 
     if (decision === "approved") {
       const balance = getLeaveBalance(
         leave.employeeId,
-        Number(leave.from.slice(0, 4)),
+        Number((leave.from || "").slice(0, 4)) ||
+          new Date().getFullYear()
       );
 
       if (getLeaveDays(leave) > balance.remaining) {
-        reviewError.textContent =
-          `${leave.employeeName} has only ${balance.remaining} leave day(s) left, ` +
-          `but this request needs ${getLeaveDays(leave)}.`;
+        showReviewError(
+          `${leave.employeeName || "Employee"} has only ` +
+          `${balance.remaining} leave day(s) left, but this request ` +
+          `needs ${getLeaveDays(leave)}.`
+        );
         return;
       }
     }
 
-    leave.status = decision === "approved" ? "Approved" : "Rejected";
+    leave.status =
+      decision === "approved" ? "Approved" : "Rejected";
+
     leave.comment = comment;
     leave.reviewedAt = new Date().toISOString();
 
     if (!saveData(STORAGE_KEYS.leaves, leaves)) {
-      reviewError.textContent = "Could not save the review.";
+      showReviewError("Could not save the review.");
       return;
     }
 
-    showToast(`Leave request ${leave.status.toLowerCase()}`, "success");
+    showToast(
+      `Leave request ${leave.status.toLowerCase()}`,
+      "success"
+    );
+
     closeReview();
     renderAll();
   }
 
-  // Admin dashboard par pending requests ki chhoti list
+  /* =========================================================
+     Admin dashboard: pending leave list
+     ========================================================= */
+
   function renderPendingList() {
     if (!pendingLeavesBox) return;
 
     const pending = getLeaves()
       .filter((leave) => leave.status === "Pending")
-      .sort((a, b) => (a.createdAt || "").localeCompare(b.createdAt || ""));
+      .sort((a, b) =>
+        (b.createdAt || "").localeCompare(a.createdAt || "")
+      );
 
     pendingLeavesBox.innerHTML = "";
 
@@ -527,10 +599,13 @@ document.addEventListener("DOMContentLoaded", () => {
       info.className = "pending-info";
 
       const name = document.createElement("strong");
-      name.textContent = leave.employeeName;
+      name.textContent = leave.employeeName || "Employee";
 
       const details = document.createElement("small");
-      details.textContent = `${formatLeaveType(leave.type)} · ${formatLeavePeriod(leave)} · ${getLeaveDays(leave)} day(s)`;
+      details.textContent =
+        `${formatLeaveType(leave.type)} · ` +
+        `${formatLeavePeriod(leave)} · ` +
+        `${getLeaveDays(leave)} day(s)`;
 
       info.append(name, details);
 
@@ -551,9 +626,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  /* =======================================================
-     Start
-     ======================================================= */
+  /* =========================================================
+     Render and events
+     ========================================================= */
 
   function renderAll() {
     renderBalance();
@@ -563,26 +638,35 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   leaveForm?.addEventListener("submit", submitLeave);
-  leaveForm?.addEventListener("input", () => showLeaveError(""));
+
+  leaveForm?.addEventListener("input", () => {
+    showLeaveError("");
+  });
+
   reviewForm?.addEventListener("submit", submitReview);
   cancelReviewBtn?.addEventListener("click", closeReview);
   statusFilter?.addEventListener("change", renderLeaveTable);
 
-  // Doosre tab mein leaves ya settings badlein to ye page bhi update ho jaye
   window.addEventListener("storage", (event) => {
-    if ([STORAGE_KEYS.leaves, STORAGE_KEYS.settings].includes(event.key))
+    if (
+      event.key === STORAGE_KEYS.leaves ||
+      event.key === STORAGE_KEYS.settings
+    ) {
       renderAll();
+    }
   });
 
   setupDateInputs();
   renderAll();
 
-  // Dashboard se "Review" dabane par wahi request khul jaye
+  // Open the selected pending request from the dashboard link
   const reviewId = new URLSearchParams(location.search).get("review");
 
   if (reviewId && reviewCard) {
     const target = getLeaves().find(
-      (leave) => String(leave.id) === reviewId && leave.status === "Pending",
+      (leave) =>
+        String(leave.id) === reviewId &&
+        leave.status === "Pending"
     );
 
     if (target) openReview(target);

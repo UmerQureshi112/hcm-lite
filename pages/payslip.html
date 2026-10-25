@@ -1,248 +1,166 @@
-<!doctype html>
+l<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>HCM Lite | Payslip</title>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
-      rel="stylesheet"
-    />
-    <link rel="stylesheet" href="../css/style.css" />
+  <title>HCM Lite | Payslip</title>
 
-    <!-- Bina defer ke: pehle storage, phir theme, phir auth (admin aur employee dono allowed) -->
-    <script src="../js/storage.js"></script>
-    <script src="../js/theme.js"></script>
-    <script src="../js/auth.js" data-role="any"></script>
+  <link rel="stylesheet" href="../css/style.css" />
+  <link rel="stylesheet" href="../css/payslip.css" />
 
-    <!-- Order zaroori hai: payslip.js attendance.js ka calculatePayslip() use karti hai -->
-    <script src="../js/attendance.js" defer></script>
-    <script src="../js/payslip.js" defer></script>
-  </head>
-  <body>
-    <!-- payslip.html -->
+  <script src="../js/storage.js"></script>
+ <script src="../js/auth.js" data-role="any"></script>
+  <script src="../js/theme.js" defer></script>
+  <script src="../js/attendance.js" defer></script>
+  <script src="../js/payslip.js" defer></script>
+</head>
 
-    <div class="app">
-      <aside class="sidebar">
-        <div class="brand">
-          <span class="brand-logo">H</span>
-          <div>
-            <strong>HCM Lite</strong>
-            <small data-company-name>Company</small>
-          </div>
-        </div>
+<body>
+  <header class="navbar">
+    <h1>HCM Lite</h1>
 
-        <!-- Admin menu -->
-        <nav class="nav" aria-label="Main menu" data-only-role="admin" hidden>
-          <a class="nav-link" href="admin.html"
-            ><span class="nav-icon">📊</span> Dashboard</a
-          >
-          <a class="nav-link" href="employees.html"
-            ><span class="nav-icon">👥</span> Employees</a
-          >
-          <a class="nav-link" href="leaves.html"
-            ><span class="nav-icon">📝</span> Leave Requests</a
-          >
-          <a class="nav-link" href="settings.html"
-            ><span class="nav-icon">⚙️</span> Settings</a
-          >
-          <a class="nav-link active" href="payslip.html" aria-current="page"
-            ><span class="nav-icon">💵</span> Payslips</a
-          >
-        </nav>
+    <nav aria-label="Main navigation">
+      <a href="../index.html">Home</a>
+      <a href="admin.html">Dashboard</a>
+      <a href="employees.html">Employees</a>
+      <a href="leaves.html">Leaves</a>
+      <a href="payslip.html">Payslip</a>
+      <a href="settings.html">Settings</a>
+    </nav>
 
-        <!-- Employee menu -->
-        <nav
-          class="nav"
-          aria-label="Main menu"
-          data-only-role="employee"
-          hidden
-        >
-          <a class="nav-link" href="employee.html"
-            ><span class="nav-icon">🏠</span> My Dashboard</a
-          >
-          <a class="nav-link active" href="payslip.html" aria-current="page"
-            ><span class="nav-icon">💵</span> My Payslip</a
-          >
-        </nav>
+    <button type="button" id="themeToggle">Toggle Theme</button>
+  </header>
 
-        <div class="sidebar-footer">
-          HCM Lite &copy; 2026<br />Data is saved in this browser.
-        </div>
-      </aside>
+  <main class="container">
+    <h2>Employee Payslip</h2>
 
-      <div class="main">
-        <header class="topbar">
-          <div>
-            <h1 class="page-title">Monthly Payslip</h1>
-            <p class="page-sub">Salary, deductions and net pay for the month</p>
-          </div>
-
-          <div class="topbar-actions">
-            <div data-theme-slot></div>
-
-            <div class="user-chip">
-              <span class="avatar" data-user-initials>U</span>
-              <div>
-                <strong data-user-name>User</strong>
-                <small data-user-role>User</small>
-              </div>
-            </div>
-
-            <button
-              id="logoutBtn"
-              class="btn btn-secondary btn-sm"
-              type="button"
-            >
-              Logout
-            </button>
-          </div>
-        </header>
-
-        <main class="content">
-          <!-- Controls -->
-          <section class="card no-print">
-            <div class="card-header">
-              <div>
-                <h2 class="card-title">Choose Payslip</h2>
-                <p class="card-sub" id="controlsHint">
-                  Pick a month to view your payslip
-                </p>
-              </div>
-            </div>
-
-            <div class="form-grid">
-              <div class="field" id="employeeField" hidden>
-                <label for="payslipEmployeeSelect">Employee</label>
-                <select id="payslipEmployeeSelect"></select>
-              </div>
-
-              <div class="field">
-                <label for="payslipMonthInput">Month</label>
-                <input id="payslipMonthInput" type="month" />
-              </div>
-
-              <div class="full form-actions">
-                <button
-                  id="printPayslipBtn"
-                  class="btn btn-primary"
-                  type="button"
-                >
-                  Print / Save as PDF
-                </button>
-              </div>
-            </div>
-          </section>
-
-          <p id="payslipEmpty" class="empty-state" hidden></p>
-
-          <!-- Payslip -->
-          <section class="card payslip-sheet" id="payslipContent" hidden>
-            <div class="payslip-head">
-              <div>
-                <h2 id="payslipCompany">Company</h2>
-                <p>Salary statement for <strong id="payslipMonth">-</strong></p>
-              </div>
-              <span class="payslip-badge">Payslip</span>
-            </div>
-
-            <dl class="payslip-info">
-              <div>
-                <dt>Employee</dt>
-                <dd id="payslipEmployee">-</dd>
-              </div>
-              <div>
-                <dt>Department</dt>
-                <dd id="payslipDepartment">-</dd>
-              </div>
-              <div>
-                <dt>Email</dt>
-                <dd id="payslipEmail">-</dd>
-              </div>
-              <div>
-                <dt>Joined</dt>
-                <dd id="payslipJoined">-</dd>
-              </div>
-            </dl>
-
-            <div class="payslip-columns">
-              <div>
-                <h3>Attendance</h3>
-                <table>
-                  <tbody>
-                    <tr>
-                      <td>Working days in month</td>
-                      <td class="num" id="workingDays">0</td>
-                    </tr>
-                    <tr>
-                      <td>Days counted so far</td>
-                      <td class="num" id="countedDays">0</td>
-                    </tr>
-                    <tr>
-                      <td>Present</td>
-                      <td class="num" id="presentDays">0</td>
-                    </tr>
-                    <tr>
-                      <td>Late (paid in full)</td>
-                      <td class="num" id="lateDays">0</td>
-                    </tr>
-                    <tr>
-                      <td>Half days</td>
-                      <td class="num" id="halfDays">0</td>
-                    </tr>
-                    <tr>
-                      <td>Approved leave</td>
-                      <td class="num" id="leaveDays">0</td>
-                    </tr>
-                    <tr>
-                      <td>Absent</td>
-                      <td class="num" id="absentDays">0</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              <div>
-                <h3>Salary</h3>
-                <table>
-                  <tbody>
-                    <tr>
-                      <td>Monthly salary</td>
-                      <td class="num" id="monthlySalary">0</td>
-                    </tr>
-                    <tr>
-                      <td>Daily salary</td>
-                      <td class="num" id="dailySalary">0</td>
-                    </tr>
-                    <tr>
-                      <td>Absent deduction</td>
-                      <td class="num minus" id="absentDeduction">0</td>
-                    </tr>
-                    <tr>
-                      <td>Half day deduction</td>
-                      <td class="num minus" id="halfDayDeduction">0</td>
-                    </tr>
-                    <tr class="total">
-                      <td>Total deduction</td>
-                      <td class="num minus" id="salaryDeduction">0</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <div class="net-pay">
-              <span>Net salary</span>
-              <strong id="netSalary">0</strong>
-            </div>
-
-            <p class="payslip-note" id="payslipMessage" role="status"></p>
-          </section>
-        </main>
+    <section class="payslip-actions">
+      <div id="employeeField">
+        <label for="payslipEmployeeSelect">Select Employee</label>
+        <select id="payslipEmployeeSelect">
+          <option value="">Select an employee</option>
+        </select>
       </div>
-    </div>
-  </body>
+
+      <label for="payslipMonthInput">Salary Month</label>
+      <input
+        type="month"
+        id="payslipMonthInput"
+        required
+      />
+
+      <button type="button" id="printPayslipBtn">
+        Print / Save PDF
+      </button>
+
+      <p id="controlsHint">Select an employee and month to view the payslip.</p>
+    </section>
+
+    <p id="payslipMessage" role="status" aria-live="polite"></p>
+
+    <p id="payslipEmpty" hidden>
+      No payslip data is available for the selected employee and month.
+    </p>
+
+    <section class="payslip" id="payslipContent" hidden>
+      <header class="payslip-header">
+        <h2 id="payslipCompany">HCM Lite</h2>
+        <p>Monthly Salary Statement</p>
+        <p id="payslipMonth"></p>
+      </header>
+
+      <section class="payslip-details">
+        <p><strong>Employee:</strong> <span id="payslipEmployee">—</span></p>
+        <p><strong>Department:</strong> <span id="payslipDepartment">—</span></p>
+        <p><strong>Email:</strong> <span id="payslipEmail">—</span></p>
+        <p><strong>Date Joined:</strong> <span id="payslipJoined">—</span></p>
+      </section>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Attendance Summary</th>
+              <th scope="col">Days</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr>
+              <td>Working Days</td>
+              <td id="workingDays">0</td>
+            </tr>
+            <tr>
+              <td>Recorded Attendance</td>
+              <td id="countedDays">0</td>
+            </tr>
+            <tr>
+              <td>Present Days</td>
+              <td id="presentDays">0</td>
+            </tr>
+            <tr>
+              <td>Late Days</td>
+              <td id="lateDays">0</td>
+            </tr>
+            <tr>
+              <td>Half Days</td>
+              <td id="halfDays">0</td>
+            </tr>
+            <tr>
+              <td>Approved Leave Days</td>
+              <td id="leaveDays">0</td>
+            </tr>
+            <tr>
+              <td>Absent Days</td>
+              <td id="absentDays">0</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Salary Details</th>
+              <th scope="col">Amount</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr>
+              <td>Monthly Salary</td>
+              <td id="monthlySalary">Rs. 0</td>
+            </tr>
+            <tr>
+              <td>Daily Salary</td>
+              <td id="dailySalary">Rs. 0</td>
+            </tr>
+            <tr>
+              <td>Absent Deduction</td>
+              <td id="absentDeduction">Rs. 0</td>
+            </tr>
+            <tr>
+              <td>Half-Day Deduction</td>
+              <td id="halfDayDeduction">Rs. 0</td>
+            </tr>
+            <tr>
+              <td>Total Deduction</td>
+              <td id="salaryDeduction">Rs. 0</td>
+            </tr>
+            <tr>
+              <th scope="row">Net Salary</th>
+              <th id="netSalary">Rs. 0</th>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p id="payslipNote">
+        This payslip is generated from attendance and salary data saved in this browser.
+      </p>
+    </section>
+  </main>
+</body>
 </html>

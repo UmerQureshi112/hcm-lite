@@ -1,160 +1,260 @@
-// js/payslip.js
-// Payslip page: admin kisi bhi employee ki, employee sirf apni payslip dekhta hai.
-// Hisab attendance.js ke calculatePayslip() se aata hai, taake helper aur
-// payslip ke numbers hamesha barabar rahein.
 
-document.addEventListener("DOMContentLoaded", () => {
-  const user = getCurrentUser();
-  const sheet = document.getElementById("payslipContent");
+document.addEventListener("DOMContentLoaded", function () {
+  const $ = (id) => document.getElementById(id);
 
-  // Sirf payslip page par chalao
-  if (!user || !sheet) return;
+  const content = $("payslipContent");
+  const employeeSelect = $("payslipEmployeeSelect");
+  const monthInput = $("payslipMonthInput");
+  const emptyMessage = $("payslipEmpty");
+  const message = $("payslipMessage");
+  const printButton = $("printPayslipBtn");
+  const employeeField = $("employeeField");
+  const controlsHint = $("controlsHint");
 
-  const isAdmin = user.role === "admin";
-
-  const monthInput = document.getElementById("payslipMonthInput");
-  const employeeField = document.getElementById("employeeField");
-  const employeeSelect = document.getElementById("payslipEmployeeSelect");
-  const controlsHint = document.getElementById("controlsHint");
-  const emptyEl = document.getElementById("payslipEmpty");
-  const printBtn = document.getElementById("printPayslipBtn");
-
-  const text = (id, value) => {
-    document.getElementById(id).textContent = value;
-  };
-
-  // Role ke hisab se sidebar dikhao
-  document.querySelectorAll("[data-only-role]").forEach((el) => {
-    el.hidden = el.dataset.onlyRole !== user.role;
-  });
-
-  function showEmpty(message) {
-    sheet.hidden = true;
-    emptyEl.textContent = message;
-    emptyEl.hidden = false;
-    printBtn.disabled = true;
+  if (!content || !employeeSelect || !monthInput) {
+    console.error("Payslip setup error: Check payslip.html IDs.");
+    return;
   }
 
-  function getSelectedEmployee() {
-    const employees = getEmployees();
-
-    // Employee ke session mein salary nahi hoti, isliye id se asal record dhoondo
-    const id = isAdmin ? employeeSelect.value : user.id;
-    return employees.find((item) => String(item.id) === String(id));
+  if (typeof getEmployees !== "function" ||
+      typeof calculatePayslip !== "function") {
+    if (message) message.textContent = "Salary data could not be loaded.";
+    return;
   }
 
-  function render() {
+  const currentUser =
+    typeof getCurrentUser === "function" ? getCurrentUser() : null;
+
+  const isEmployee = currentUser &&
+    String(currentUser.role).toLowerCase() === "employee";
+
+  function employeeId(employee) {
+    return String(employee.id ?? employee.employeeId ?? "");
+  }
+
+  function employeeName(employee) {
+    return employee.name || employee.fullName ||
+      employee.employeeName ||
+      [employee.firstName, employee.lastName].filter(Boolean).join(" ") ||
+      "Employee";
+  }
+
+  function money(value) {
+    const amount = Number(value);
+    return "Rs. " + (Number.isFinite(amount) ? amount : 0)
+      .toLocaleString("en-PK", { maximumFractionDigits: 2 });
+  }
+
+  function setText(id, value) {
+    const element = $(id);
+    if (element) element.textContent = value ?? "—";
+  }
+
+  function showEmpty(text) {
+    content.hidden = true;
+    if (emptyMessage) {
+      emptyMessage.hidden = false;
+      emptyMessage.textContent = text;
+    }
+  }
+
+  function showMessage(text) {
+    if (message) message.textContent = text || "";
+  }
+
+  function loadEmployees() {
+    const allEmployees = getEmployees() || [];
+
+    const availableEmployees = isEmployee
+      ? allEmployees.filter((employee) =>
+          (employeeId(employee) === String(currentUser.id) ||
+           employee.email?.toLowerCase() === currentUser.email?.toLowerCase()) &&
+          employee.status !== "Inactive"
+        )
+      : allEmployees;
+
+    employeeSelect.innerHTML = '<option value="">Select employee</option>';
+
+    availableEmployees.forEach((employee) => {
+      const id = employeeId(employee);
+      if (!id) return;
+
+      const option = document.createElement("option");
+      option.value = id;
+      option.textContent = employeeName(employee);
+      employeeSelect.appendChild(option);
+    });
+
+    if (isEmployee) {
+      employeeSelect.disabled = true;
+      if (employeeField) employeeField.hidden = true;
+
+      if (availableEmployees.length === 1) {
+        employeeSelect.value = employeeId(availableEmployees[0]);
+      }
+    }
+
+    if (!availableEmployees.length) {
+      showEmpty(isEmployee
+        ? "Your employee profile was not found or is inactive."
+        : "No employees found. Add an employee first.");
+    }
+
+    return availableEmployees;
+  }
+
+  function renderPayslip() {
+    showMessage("");
+
     const month = monthInput.value;
-    const employee = getSelectedEmployee();
+    const selectedId = employeeSelect.value;
 
-    emptyEl.hidden = true;
-
-    if (!employee) {
-      showEmpty(
-        isAdmin
-          ? "No employees yet. Add an employee first to see a payslip."
-          : "Your employee record was not found.",
-      );
+    if (!selectedId) {
+      showEmpty("Please select an employee.");
       return;
     }
 
     if (!month) {
-      showEmpty("Please select a month.");
+      showEmpty("Please select a salary month.");
       return;
     }
 
-    const slip = calculatePayslip(employee, month);
-    const label = new Date(`${month}-01T00:00:00`).toLocaleDateString("en-GB", {
-      month: "long",
-      year: "numeric",
-    });
-
-    text("payslipCompany", getCompanyName());
-    text("payslipMonth", label);
-    text("payslipEmployee", employee.name);
-    text("payslipDepartment", employee.department);
-    text("payslipEmail", employee.email);
-    text(
-      "payslipJoined",
-      employee.createdAt ? formatDate(employee.createdAt.slice(0, 10)) : "-",
+    const employee = (getEmployees() || []).find(
+      (item) => employeeId(item) === selectedId
     );
 
-    text("workingDays", slip.monthWorkingDays);
-    text("countedDays", slip.countedDays);
-    text("presentDays", slip.present);
-    text("lateDays", slip.late);
-    text("halfDays", slip.halfDays);
-    text("leaveDays", slip.leaveDays);
-    text("absentDays", slip.absentDays);
-
-    text("monthlySalary", formatCurrency(slip.monthlySalary));
-    text("dailySalary", formatCurrency(slip.dailySalary));
-    text("absentDeduction", `- ${formatCurrency(slip.absentDeduction)}`);
-    text("halfDayDeduction", `- ${formatCurrency(slip.halfDayDeduction)}`);
-    text("salaryDeduction", `- ${formatCurrency(slip.totalDeduction)}`);
-    text("netSalary", formatCurrency(slip.netSalary));
-
-    let note =
-      "Daily salary = monthly salary ÷ working days. Absent = 1 day deducted, half day = 0.5 day deducted.";
-
-    if (month === getToday().slice(0, 7)) {
-      note +=
-        " This month is still running, so only days up to today are counted.";
-    } else if (slip.countedDays === 0) {
-      note += " No working days were counted for this month.";
+    if (!employee || employee.status === "Inactive") {
+      showEmpty("Employee not found or inactive.");
+      return;
     }
 
-    text("payslipMessage", note);
+    // Security guard: employees may view only their own payslip.
+    if (isEmployee &&
+        employee.email?.toLowerCase() !== currentUser.email?.toLowerCase() &&
+        employeeId(employee) !== String(currentUser.id)) {
+      showEmpty("You can only view your own payslip.");
+      return;
+    }
 
-    sheet.hidden = false;
-    printBtn.disabled = false;
+    let result;
+
+    try {
+      result = calculatePayslip(employee, month);
+    } catch (error) {
+      console.error("Payslip calculation failed:", error);
+      showEmpty("Unable to calculate payslip. Check attendance.js.");
+      return;
+    }
+
+    if (!result || typeof result !== "object") {
+      showEmpty("No payslip data is available.");
+      return;
+    }
+
+    // calculatePayslip returns attendance summary fields directly.
+    const summary = result.summary || result;
+    const monthlySalary = Number(
+      result.monthlySalary ?? employee.salary ??
+      employee.monthlySalary ?? employee.basicSalary ?? 0
+    );
+    const absentDeduction = Number(result.absentDeduction ?? 0);
+    const halfDayDeduction = Number(result.halfDayDeduction ?? 0);
+    const totalDeduction = Number(
+      result.totalDeduction ??
+      result.salaryDeduction ??
+      absentDeduction + halfDayDeduction
+    );
+    const netSalary = Number(
+      result.netSalary ?? Math.max(monthlySalary - totalDeduction, 0)
+    );
+
+    const monthDate = new Date(month + "-01T00:00:00");
+    const monthLabel = Number.isNaN(monthDate.getTime())
+      ? month
+      : monthDate.toLocaleDateString("en-PK", {
+          month: "long",
+          year: "numeric"
+        });
+
+    setText("payslipCompany",
+      typeof getCompanyName === "function" ? getCompanyName() : "HCM Lite");
+    setText("payslipMonth", monthLabel);
+    setText("payslipEmployee", employeeName(employee));
+    setText("payslipDepartment",
+      employee.department || employee.designation || "—");
+    setText("payslipEmail", employee.email || "—");
+
+    const joined = employee.joiningDate || employee.joinDate ||
+      employee.dateJoined || "—";
+    setText("payslipJoined", joined);
+
+    const values = {
+      workingDays: ["workingDays", "monthWorkingDays", "totalWorkingDays"],
+      countedDays: ["countedDays", "recordedDays", "totalRecords"],
+      presentDays: ["presentDays", "present"],
+      lateDays: ["lateDays", "late"],
+      halfDays: ["halfDays", "halfDay"],
+      leaveDays: ["leaveDays", "approvedLeaveDays"],
+      absentDays: ["absentDays", "absent"]
+    };
+
+    Object.entries(values).forEach(([id, keys]) => {
+      let value = 0;
+      for (const key of keys) {
+        if (summary[key] != null) {
+          value = summary[key];
+          break;
+        }
+      }
+      setText(id, Number(value) || 0);
+    });
+
+    setText("monthlySalary", money(monthlySalary));
+    setText("dailySalary", money(result.dailySalary ?? 0));
+    setText("absentDeduction", money(absentDeduction));
+    setText("halfDayDeduction", money(halfDayDeduction));
+    setText("salaryDeduction", money(totalDeduction));
+    setText("netSalary", money(netSalary));
+
+    content.hidden = false;
+    if (emptyMessage) emptyMessage.hidden = true;
+
+    if (controlsHint) {
+      controlsHint.textContent =
+        "Payslip generated for " + employeeName(employee) +
+        " — " + monthLabel + ".";
+    }
   }
 
-  function fillEmployeeSelect() {
-    employeeSelect.innerHTML = "";
+  const now = new Date();
+  monthInput.value = now.getFullYear() + "-" +
+    String(now.getMonth() + 1).padStart(2, "0");
 
-    getEmployees().forEach((employee) => {
-      const option = document.createElement("option");
-      option.value = employee.id;
-      option.textContent = `${employee.name} (${employee.department})`;
-      employeeSelect.appendChild(option);
+  loadEmployees();
+
+  employeeSelect.addEventListener("change", renderPayslip);
+  monthInput.addEventListener("change", renderPayslip);
+
+  if (printButton) {
+    printButton.addEventListener("click", function () {
+      if (content.hidden) {
+        showMessage("Generate a payslip before printing.");
+        return;
+      }
+      window.print();
     });
   }
 
-  /* ---------- Start ---------- */
+  window.addEventListener("storage", function () {
+    const previous = employeeSelect.value;
+    loadEmployees();
 
-  const currentMonth = getToday().slice(0, 7);
-  monthInput.value = currentMonth;
-  monthInput.max = currentMonth; // aane wale mahine ki payslip nahi
-
-  if (isAdmin) {
-    employeeField.hidden = false;
-    controlsHint.textContent = "Pick an employee and a month";
-    fillEmployeeSelect();
-    employeeSelect.addEventListener("change", render);
-  }
-
-  monthInput.addEventListener("change", render);
-  printBtn.addEventListener("click", () => window.print());
-
-  // Doosre tab mein data badle to payslip bhi update ho jaye
-  window.addEventListener("storage", (event) => {
-    const watched = [
-      STORAGE_KEYS.attendance,
-      STORAGE_KEYS.leaves,
-      STORAGE_KEYS.employees,
-      STORAGE_KEYS.settings,
-    ];
-
-    if (watched.includes(event.key)) {
-      if (isAdmin) {
-        const chosen = employeeSelect.value;
-        fillEmployeeSelect();
-        employeeSelect.value = chosen;
-      }
-      render();
+    if ([...employeeSelect.options].some((option) => option.value === previous)) {
+      employeeSelect.value = previous;
     }
+
+    renderPayslip();
   });
 
-  render();
+  renderPayslip();
 });

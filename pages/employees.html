@@ -1,264 +1,168 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>HCM Lite | Employees</title>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HCM Lite | Employees</title>
 
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
-      rel="stylesheet"
-    />
-    <link rel="stylesheet" href="../css/style.css" />
-    <link rel="stylesheet" href="../css/employees.css" />
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/employees.css">
 
-    <!-- Bina defer ke: pehle storage, phir theme, phir auth (admin guard) -->
-    <script src="../js/storage.js"></script>
-    <script src="../js/theme.js"></script>
-    <script src="../js/auth.js" data-role="admin"></script>
-    <script src="../js/employees.js" defer></script>
-  </head>
-  <body>
-    <!-- employees.html -->
-
-    <div class="app">
-      <aside class="sidebar">
-        <div class="brand">
-          <span class="brand-logo">H</span>
-          <div>
-            <strong>HCM Lite</strong>
-            <small data-company-name>Company</small>
-          </div>
-        </div>
-
-        <nav class="nav" aria-label="Main menu">
-          <a class="nav-link" href="admin.html"
-            ><span class="nav-icon">📊</span> Dashboard</a
-          >
-          <a class="nav-link active" href="employees.html" aria-current="page"
-            ><span class="nav-icon">👥</span> Employees</a
-          >
-          <a class="nav-link" href="leaves.html"
-            ><span class="nav-icon">📝</span> Leave Requests</a
-          >
-          <a class="nav-link" href="settings.html"
-            ><span class="nav-icon">⚙️</span> Settings</a
-          >
-          <a class="nav-link" href="payslip.html"
-            ><span class="nav-icon">💵</span> Payslips</a
-          >
-        </nav>
-
-        <div class="sidebar-footer">
-          HCM Lite &copy; 2026<br />Data is saved in this browser.
-        </div>
-      </aside>
-
-      <div class="main">
-        <header class="topbar">
-          <div>
-            <h1 class="page-title">Employee Management</h1>
-            <p class="page-sub">
-              Add employees, edit details and manage logins
-            </p>
-          </div>
-
-          <div class="topbar-actions">
-            <div data-theme-slot></div>
-
-            <div class="user-chip">
-              <span class="avatar" data-user-initials>A</span>
-              <div>
-                <strong data-user-name>Admin</strong>
-                <small data-user-role>Administrator</small>
-              </div>
-            </div>
-
-            <button
-              id="logoutBtn"
-              class="btn btn-secondary btn-sm"
-              type="button"
-            >
-              Logout
-            </button>
-          </div>
-        </header>
-
-        <main class="content">
-          <!-- Summary -->
-          <section class="stats-grid" aria-label="Employee summary">
-            <article class="stat-card">
-              <span class="stat-icon">👥</span>
-              <div>
-                <p class="stat-label">Total Employees</p>
-                <p class="stat-value" id="statTotal">0</p>
-              </div>
-            </article>
-
-            <article class="stat-card" data-tone="info">
-              <span class="stat-icon">🏢</span>
-              <div>
-                <p class="stat-label">Departments in Use</p>
-                <p class="stat-value" id="statDepartments">0</p>
-              </div>
-            </article>
-
-            <article class="stat-card" data-tone="success">
-              <span class="stat-icon">💰</span>
-              <div>
-                <p class="stat-label">Monthly Payroll</p>
-                <p class="stat-value stat-money" id="statPayroll">Rs 0</p>
-              </div>
-            </article>
-          </section>
-
-          <!-- Add / Edit employee -->
-          <section class="card" id="employeeFormCard">
-            <div class="card-header">
-              <div>
-                <h2 class="card-title" id="formTitle">Add New Employee</h2>
-                <p class="card-sub">
-                  Adding an employee also creates their login.
-                </p>
-              </div>
-            </div>
-
-            <form id="employeeForm" novalidate>
-              <input type="hidden" id="employeeId" />
-
-              <div class="form-grid">
-                <div class="field">
-                  <label for="employeeName">Full Name</label>
-                  <input
-                    id="employeeName"
-                    type="text"
-                    autocomplete="off"
-                    required
-                  />
-                </div>
-
-                <div class="field">
-                  <label for="employeeEmail">Email</label>
-                  <input
-                    id="employeeEmail"
-                    type="email"
-                    autocomplete="off"
-                    required
-                  />
-                </div>
-
-                <div class="field">
-                  <label for="employeePassword">Login Password</label>
-                  <input
-                    id="employeePassword"
-                    type="password"
-                    autocomplete="new-password"
-                    minlength="6"
-                    placeholder="At least 6 characters"
-                  />
-                </div>
-
-                <div class="field">
-                  <label for="department">Department</label>
-                  <select id="department" required>
-                    <option value="">Select Department</option>
-                    <option value="IT">IT</option>
-                    <option value="HR">HR</option>
-                    <option value="Finance">Finance</option>
-                    <option value="Marketing">Marketing</option>
-                  </select>
-                </div>
-
-                <div class="field full">
-                  <label for="salary">Monthly Salary (Rs)</label>
-                  <input
-                    id="salary"
-                    type="number"
-                    min="1"
-                    step="0.01"
-                    required
-                  />
-                </div>
-
-                <div class="full">
-                  <p id="employeeError" class="error-message" role="alert"></p>
-                </div>
-
-                <div class="full form-actions">
-                  <button
-                    type="submit"
-                    id="saveEmployeeBtn"
-                    class="btn btn-primary"
-                  >
-                    Add Employee
-                  </button>
-                  <button
-                    type="button"
-                    id="cancelEditBtn"
-                    class="btn btn-secondary"
-                    hidden
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            </form>
-          </section>
-
-          <!-- Employees list -->
-          <section class="card">
-            <div class="card-header">
-              <div>
-                <h2 class="card-title">All Employees</h2>
-                <p class="card-sub" id="resultCount">0 employees</p>
-              </div>
-
-              <div class="toolbar">
-                <div class="field">
-                  <label class="sr-only" for="searchEmployee"
-                    >Search employees</label
-                  >
-                  <input
-                    id="searchEmployee"
-                    type="search"
-                    placeholder="Search by name or email"
-                  />
-                </div>
-
-                <div class="field">
-                  <label class="sr-only" for="filterDepartment"
-                    >Filter by department</label
-                  >
-                  <select id="filterDepartment">
-                    <option value="">All Departments</option>
-                    <option value="IT">IT</option>
-                    <option value="HR">HR</option>
-                    <option value="Finance">Finance</option>
-                    <option value="Marketing">Marketing</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div class="table-wrapper">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Employee</th>
-                    <th>Department</th>
-                    <th>Salary</th>
-                    <th>Joined</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="employeesTableBody"></tbody>
-              </table>
-            </div>
-          </section>
-        </main>
+  <script src="../js/storage.js"></script>
+  <script src="../js/auth.js" data-role="admin"></script>
+  <script src="../js/theme.js" defer></script>
+  <script src="../js/employees.js" defer></script>
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon">H</div>
+        <span>HCM Lite</span>
       </div>
-    </div>
-  </body>
+
+      <nav class="sidebar-nav">
+        <a href="admin.html" class="nav-link">
+          <span>▦</span> Dashboard
+        </a>
+        <a href="employees.html" class="nav-link active">
+          <span>♙</span> Employees
+        </a>
+        <a href="leaves.html" class="nav-link">
+          <span>▣</span> Leave Management
+        </a>
+        <a href="payslip.html" class="nav-link">
+          <span>▤</span> Payroll
+        </a>
+        <a href="settings.html" class="nav-link">
+          <span>⚙</span> Settings
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button id="themeToggle" class="nav-link" type="button">
+          <span>◐</span> Toggle Theme
+        </button>
+        <button id="logoutBtn" class="nav-link" type="button">
+          <span>↪</span> Logout
+        </button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <div>
+          <h1>Employees</h1>
+          <p class="muted">Manage your company's employee records.</p>
+        </div>
+      </header>
+
+      <section class="card">
+        <div class="section-heading">
+          <div>
+            <h2>Employee Directory</h2>
+            <p class="muted">Add, search, edit, and manage employees.</p>
+          </div>
+          <button id="addEmployeeBtn" class="btn btn-primary" type="button">
+            + Add Employee
+          </button>
+        </div>
+
+        <div id="employeeFormContainer" hidden>
+          <h3 id="employeeFormTitle">Add Employee</h3>
+
+          <form id="employeeForm">
+            <input type="hidden" id="employeeId">
+
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="employeeFullName">Full Name</label>
+                <input id="employeeFullName" name="name" type="text" required>
+              </div>
+
+              <div class="form-group">
+                <label for="employeeEmail">Email</label>
+                <input id="employeeEmail" name="email" type="email" required>
+              </div>
+
+              <div class="form-group">
+                <label for="employeeDepartment">Department</label>
+                <input id="employeeDepartment" name="department" type="text" required>
+              </div>
+
+              <div class="form-group">
+                <label for="employeeDesignation">Designation</label>
+                <input id="employeeDesignation" name="designation" type="text" required>
+              </div>
+
+              <div class="form-group">
+                <label for="employeeSalary">Monthly Salary</label>
+                <input id="employeeSalary" name="salary" type="number" min="0" required>
+              </div>
+
+              <div class="form-group">
+                <label for="employeeJoinDate">Joining Date</label>
+                <input id="employeeJoinDate" name="joinDate" type="date" required>
+              </div>
+
+              <div class="form-group">
+                <label for="employeeStatus">Status</label>
+                <select id="employeeStatus" name="status" required>
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="employeePassword">Password</label>
+                <input id="employeePassword" name="password" type="password" placeholder="Set employee password">
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button class="btn btn-primary" type="submit">Save Employee</button>
+              <button id="cancelEmployeeBtn" class="btn btn-secondary" type="button">Cancel</button>
+            </div>
+
+            <p id="employeeFormError" class="form-error" role="alert"></p>
+          </form>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="section-heading">
+          <div>
+            <h2>All Employees</h2>
+          </div>
+          <div class="form-group">
+            <label for="employeeSearch">Search employees</label>
+            <input id="employeeSearch" type="search" placeholder="Search by name or email">
+          </div>
+        </div>
+
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Employee</th>
+                <th>Email</th>
+                <th>Department</th>
+                <th>Designation</th>
+                <th>Salary</th>
+                <th>Joining Date</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="employeesTableBody">
+              <tr>
+                <td colspan="8">Loading employees...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
 </html>

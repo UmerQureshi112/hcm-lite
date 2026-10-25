@@ -1,17 +1,19 @@
 // js/theme.js
-// Dark / Light mode. Saved theme page load hote hi apply hoti hai (flash se bachne ke liye).
+// Dark / Light mode with saved preference.
 
 (function () {
   const THEME_KEY = "hcm_theme";
   const root = document.documentElement;
 
-  // Pehli dafa user ne kuch choose nahi kiya to device ki setting dekho
   function getSavedTheme() {
     try {
       const saved = localStorage.getItem(THEME_KEY);
-      if (saved === "dark" || saved === "light") return saved;
+
+      if (saved === "dark" || saved === "light") {
+        return saved;
+      }
     } catch (error) {
-      // localStorage block ho to default chalega
+      // localStorage unavailable; use system preference.
     }
 
     return window.matchMedia?.("(prefers-color-scheme: dark)").matches
@@ -32,58 +34,74 @@
     }
   }
 
-  // Script <head> mein ho to page dikhne se pehle theme lag jati hai
+  function updateButton(button) {
+    if (!button) return;
+
+    const isDark = root.classList.contains("dark");
+
+    button.innerHTML = isDark
+      ? '<span aria-hidden="true">☀️</span><span class="theme-label">Light</span>'
+      : '<span aria-hidden="true">🌙</span><span class="theme-label">Dark</span>';
+
+    button.setAttribute(
+      "aria-label",
+      isDark ? "Switch to light mode" : "Switch to dark mode"
+    );
+  }
+
+  // Page render hone se pehle saved theme apply karo.
   applyTheme(getSavedTheme());
 
   document.addEventListener("DOMContentLoaded", () => {
-    let toggle = document.getElementById("themeToggle");
+    let buttons = [
+      document.getElementById("themeToggle"),
+      document.getElementById("themeToggleSettings"),
+    ].filter(Boolean);
 
-    // Button HTML mein na ho to bana do
-    if (!toggle) {
-      toggle = document.createElement("button");
-      toggle.id = "themeToggle";
-      toggle.type = "button";
-      toggle.className = "theme-toggle";
+    // Agar kisi page par theme button nahi hai, to ek create karo.
+    if (buttons.length === 0) {
+      const button = document.createElement("button");
+      button.id = "themeToggle";
+      button.type = "button";
+      button.className = "theme-toggle";
+      button.setAttribute("type", "button");
 
       const slot = document.querySelector("[data-theme-slot]");
 
       if (slot) {
-        slot.appendChild(toggle);
+        slot.appendChild(button);
       } else {
-        // Slot na ho (jaise login page) to screen ke corner mein float karega
-        toggle.classList.add("floating");
-        document.body.appendChild(toggle);
+        button.classList.add("floating");
+        document.body.appendChild(button);
       }
+
+      buttons = [button];
     }
 
-    function updateButton() {
-      const isDark = root.classList.contains("dark");
-
-      toggle.innerHTML = isDark
-        ? '<span aria-hidden="true">☀️</span><span class="theme-label">Light</span>'
-        : '<span aria-hidden="true">🌙</span><span class="theme-label">Dark</span>';
-
-      toggle.setAttribute(
-        "aria-label",
-        isDark ? "Switch to light mode" : "Switch to dark mode",
-      );
+    function refreshButtons() {
+      buttons.forEach(updateButton);
     }
 
-    toggle.addEventListener("click", () => {
+    function toggleTheme() {
       const nextTheme = root.classList.contains("dark") ? "light" : "dark";
+
       applyTheme(nextTheme);
       saveTheme(nextTheme);
-      updateButton();
+      refreshButtons();
+    }
+
+    buttons.forEach((button) => {
+      button.addEventListener("click", toggleTheme);
     });
 
-    // Doosre tab mein theme badle to ye tab bhi badal jaye
+    // Doosre tab mein theme change ho to yahan bhi update karo.
     window.addEventListener("storage", (event) => {
       if (event.key === THEME_KEY) {
         applyTheme(getSavedTheme());
-        updateButton();
+        refreshButtons();
       }
     });
 
-    updateButton();
+    refreshButtons();
   });
 })();

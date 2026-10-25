@@ -1,5 +1,7 @@
 /* css/setting.css
-   Settings page ki khaas styling. Baqi sab css/style.css mein hai. */
+   Settings page styling.
+   Shared styles are in css/style.css.
+*/
 
 /* Working days */
 .days-fieldset {
@@ -66,6 +68,7 @@
   flex-direction: column;
   gap: 14px;
   margin: 20px 0;
+  padding: 0;
   list-style: none;
 }
 
@@ -86,4 +89,74 @@
   color: var(--muted);
   font-size: 0.85rem;
   border-top: 1px solid var(--border);
+}
+
+/* Settings form */
+#settingsForm .form-grid {
+  margin-bottom: 18px;
+}
+
+#settingsForm .form-group {
+  min-width: 0;
+}
+
+#settingsForm input[type="text"],
+#settingsForm input[type="time"],
+#settingsForm input[type="number"] {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+#settingsForm input[type="checkbox"] {
+  accent-color: var(--primary);
+}
+
+#settingsError {
+  color: var(--danger, #dc2626);
+  font-size: 0.9rem;
+}
+
+#settingsMessage.success {
+  color: var(--success, #16a34a);
+  font-size: 0.9rem;
+}
+
+/* Working days in the corrected settings.html */
+.working-days {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.working-days label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.working-days input[type="checkbox"] {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+  accent-color: var(--primary);
+}
+
+/* Mobile layout */
+@media (max-width: 600px) {
+  .days-grid,
+  .working-days {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .day-chip,
+  .working-days label {
+    padding: 9px;
+    font-size: 0.82rem;
+  }
 }

@@ -1,276 +1,192 @@
-<!doctype html>
+
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>HCM Lite | Admin Dashboard</title>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#09122c">
+  <title>HCM Lite | Admin Dashboard</title>
 
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
-      rel="stylesheet"
-    />
-    <link rel="stylesheet" href="../css/style.css" />
-   <link rel="stylesheet" href="../css/admin.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-    <!-- Bina defer ke: pehle storage, phir theme, phir auth (admin guard) -->
-    <script src="../js/storage.js"></script>
-    <script src="../js/theme.js"></script>
-    <script src="../js/auth.js" data-role="admin"></script>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/admin.css">
 
-    <!-- Order zaroori hai: leave.js aur helper.js attendance.js ke functions use karti hain -->
-    <script src="../js/attendance.js" defer></script>
-    <script src="../js/leave.js" defer></script>
-    <script src="../js/helper.js" defer></script>
-  </head>
-  <body>
-    <!-- admin.html -->
+  <script src="../js/storage.js"></script>
+  <script src="../js/theme.js" defer></script>
+  <script src="../js/auth.js" data-role="admin"></script>
+  <script src="../js/attendance.js" defer></script>
+  <script src="../js/leave.js" defer></script>
+  <script src="../js/helper.js" defer></script>
+</head>
 
-    <div class="app">
-      <aside class="sidebar">
-        <div class="brand">
-          <span class="brand-logo">H</span>
-          <div>
-            <strong>HCM Lite</strong>
-            <small data-company-name>Company</small>
-          </div>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar">
+      <a class="brand" href="admin.html">
+        <span class="brand-icon">H</span>
+        <span>HCM Lite</span>
+      </a>
+
+      <nav class="sidebar-nav" aria-label="Main navigation">
+        <a class="nav-link active" href="admin.html">Dashboard</a>
+        <a class="nav-link" href="employees.html">Employees</a>
+        <a class="nav-link" href="leaves.html">Leave Management</a>
+        <a class="nav-link" href="payslip.html">Payslips</a>
+        <a class="nav-link" href="settings.html">Settings</a>
+      </nav>
+
+      <div class="sidebar-user">
+        <span class="avatar" data-user-initials>AD</span>
+        <div>
+          <strong data-user-name>Administrator</strong>
+          <small data-user-role>Administrator</small>
         </div>
-
-        <nav class="nav" aria-label="Main menu">
-          <a class="nav-link active" href="./admin.html" aria-current="page"
-            ><span class="nav-icon">📊</span> Dashboard</a
-          >
-          <a class="nav-link" href="./employees.html"
-            ><span class="nav-icon">👥</span> Employees</a
-          >
-          <a class="nav-link" href="./leaves.html"
-            ><span class="nav-icon">📝</span> Leave Requests</a
-          >
-          <a class="nav-link" href="settings.html"
-            ><span class="nav-icon">⚙️</span> Settings</a
-          >
-          <a class="nav-link" href="payslip.html"
-            ><span class="nav-icon">💵</span> Payslips</a
-          >
-        </nav>
-
-        <div class="sidebar-footer">
-          HCM Lite &copy; 2026<br />Data is saved in this browser.
-        </div>
-      </aside>
-
-      <div class="main">
-        <header class="topbar">
-          <div>
-            <h1 class="page-title">Admin Dashboard</h1>
-            <p class="page-sub">Company overview for today</p>
-          </div>
-
-          <div class="topbar-actions">
-            <div data-theme-slot></div>
-
-            <div class="user-chip">
-              <span class="avatar" data-user-initials>A</span>
-              <div>
-                <strong data-user-name>Admin</strong>
-                <small data-user-role>Administrator</small>
-              </div>
-            </div>
-
-            <button
-              id="logoutBtn"
-              class="btn btn-secondary btn-sm"
-              type="button"
-            >
-              Logout
-            </button>
-          </div>
-        </header>
-
-        <main class="content">
-          <!-- Welcome banner -->
-          <section class="hero-card">
-            <div>
-              <h2>Welcome back, <span data-user-name>Admin</span> 👋</h2>
-              <p>
-                Here is what is happening at
-                <strong data-company-name>your company</strong> today.
-              </p>
-            </div>
-
-            <div class="hero-actions">
-              <a class="btn btn-secondary" href="employees.html"
-                >+ Add Employee</a
-              >
-              <a class="btn btn-secondary" href="leaves.html">Review Leaves</a>
-            </div>
-          </section>
-
-          <!-- Stats -->
-          <section class="stats-grid" aria-label="Today at a glance">
-            <article class="stat-card">
-              <span class="stat-icon">👥</span>
-              <div>
-                <p class="stat-label">Total Employees</p>
-                <p class="stat-value" id="totalEmployees">0</p>
-              </div>
-            </article>
-
-            <article class="stat-card" data-tone="success">
-              <span class="stat-icon">✅</span>
-              <div>
-                <p class="stat-label">Checked In Today</p>
-                <p class="stat-value" id="presentToday">0</p>
-              </div>
-            </article>
-
-            <article class="stat-card" data-tone="info">
-              <span class="stat-icon">🏖️</span>
-              <div>
-                <p class="stat-label">On Leave</p>
-                <p class="stat-value" id="onLeaveToday">0</p>
-              </div>
-            </article>
-
-            <article class="stat-card" data-tone="warning">
-              <span class="stat-icon">⏰</span>
-              <div>
-                <p class="stat-label">Late Today</p>
-                <p class="stat-value" id="lateToday">0</p>
-              </div>
-            </article>
-          </section>
-
-          <div class="grid-main">
-            <!-- Today's attendance -->
-            <section class="card">
-              <div class="card-header">
-                <div>
-                  <h2 class="card-title">Today's Attendance</h2>
-                  <p class="card-sub">One row for every employee</p>
-                </div>
-              </div>
-
-              <div class="table-wrapper">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Employee</th>
-                      <th>Department</th>
-                      <th>Check In</th>
-                      <th>Check Out</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody id="attendanceTableBody"></tbody>
-                </table>
-              </div>
-            </section>
-
-            <!-- Right column -->
-            <div class="side-stack">
-              <section class="card">
-                <div class="card-header">
-                  <div>
-                    <h2 class="card-title">Pending Leave Requests</h2>
-                    <p class="card-sub">Waiting for your decision</p>
-                  </div>
-                  <a class="btn btn-ghost btn-sm" href="./leaves.html"
-                    >View all</a
-                  >
-                </div>
-
-                <div id="pendingLeaves"></div>
-              </section>
-
-              <section class="card">
-                <div class="card-header">
-                  <div>
-                    <h2 class="card-title">Last 7 Days</h2>
-                    <p class="card-sub">Employees who checked in each day</p>
-                  </div>
-                </div>
-
-                <div
-                  class="bar-chart"
-                  id="weekChart"
-                  role="img"
-                  aria-label="Bar chart of daily check-ins for the last 7 days"
-                ></div>
-              </section>
-            </div>
-          </div>
-
-          <!-- Smart helper -->
-          <section class="card">
-            <div class="card-header">
-              <div>
-                <h2 class="card-title">Smart Helper</h2>
-                <p class="card-sub">
-                  Ask a question and get an answer from your company data
-                </p>
-              </div>
-            </div>
-
-            <div class="quick-questions">
-              <button
-                type="button"
-                class="btn btn-secondary btn-sm"
-                data-helper-question="Who is present today?"
-              >
-                Who is present?
-              </button>
-              <button
-                type="button"
-                class="btn btn-secondary btn-sm"
-                data-helper-question="Who is late today?"
-              >
-                Who is late?
-              </button>
-              <button
-                type="button"
-                class="btn btn-secondary btn-sm"
-                data-helper-question="Pending leave requests"
-              >
-                Pending leaves
-              </button>
-              <button
-                type="button"
-                class="btn btn-secondary btn-sm"
-                data-helper-question="Monthly payroll"
-              >
-                Payroll
-              </button>
-              <button
-                type="button"
-                class="btn btn-secondary btn-sm"
-                data-helper-question="Office rules"
-              >
-                Office rules
-              </button>
-            </div>
-
-            <div
-              id="helperMessages"
-              class="chat-messages"
-              aria-live="polite"
-            ></div>
-
-            <form id="helperForm" class="chat-form">
-              <label class="sr-only" for="helperQuestion">Ask a question</label>
-              <input
-                id="helperQuestion"
-                type="text"
-                autocomplete="off"
-                placeholder="Type a question, e.g. how many employees?"
-                required
-              />
-              <button type="submit" class="btn btn-primary">Ask</button>
-            </form>
-          </section>
-        </main>
       </div>
-    </div>
-  </body>
+
+      <button type="button" class="btn btn-secondary btn-block" id="logoutBtn">
+        Log out
+      </button>
+    </aside>
+
+    <main class="main-content">
+      <header class="page-header">
+        <div>
+          <p class="eyebrow" data-company-name>HCM Lite</p>
+          <h1>Admin Dashboard</h1>
+          <p class="muted">Welcome back. Here's your workforce overview.</p>
+        </div>
+        <div class="header-actions">
+          <span class="badge badge-info" data-user-role>Administrator</span>
+        </div>
+      </header>
+
+      <section class="hero-card card">
+        <div>
+          <p class="eyebrow">WORKFORCE OVERVIEW</p>
+          <h2>Manage your team with confidence</h2>
+          <p>Monitor attendance, review leave requests and manage employee records.</p>
+        </div>
+        <div class="hero-actions">
+          <a href="employees.html" class="btn btn-primary">Manage Employees</a>
+          <a href="leaves.html" class="btn btn-secondary">Review Leaves</a>
+        </div>
+      </section>
+
+      <section class="stats-grid" aria-label="Workforce statistics">
+        <article class="stat-card card">
+          <span class="stat-label">Total Employees</span>
+          <strong class="stat-value" id="totalEmployees">0</strong>
+          <span class="muted">Registered employees</span>
+        </article>
+
+        <article class="stat-card card">
+          <span class="stat-label">Checked In Today</span>
+          <strong class="stat-value" id="presentToday">0</strong>
+          <span class="muted">Attendance records</span>
+        </article>
+
+        <article class="stat-card card">
+          <span class="stat-label">Late Today</span>
+          <strong class="stat-value" id="lateToday">0</strong>
+          <span class="muted">Late arrivals</span>
+        </article>
+
+        <article class="stat-card card">
+          <span class="stat-label">On Leave Today</span>
+          <strong class="stat-value" id="onLeaveToday">0</strong>
+          <span class="muted">Approved leave</span>
+        </article>
+      </section>
+
+      <section class="dashboard-grid">
+        <article class="card">
+          <div class="section-heading">
+            <div>
+              <h2>Today's Attendance</h2>
+              <p class="muted">Attendance status for each employee.</p>
+            </div>
+            <a href="employees.html" class="text-link">Employees</a>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Employee</th>
+                  <th>Department</th>
+                  <th>Check In</th>
+                  <th>Check Out</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="attendanceTableBody">
+                <tr class="empty-row">
+                  <td colspan="5">Loading attendance...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <div class="side-stack">
+          <article class="card">
+            <div class="section-heading">
+              <div>
+                <h2>Pending Leave Requests</h2>
+                <p class="muted">Requests awaiting review.</p>
+              </div>
+              <a href="leaves.html" class="text-link">View all</a>
+            </div>
+
+            <div id="pendingLeavesList" class="pending-leaves-list">
+              <p class="muted">Loading leave requests...</p>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="section-heading">
+              <div>
+                <h2>Attendance Trend</h2>
+                <p class="muted">Attendance records over the last 7 days.</p>
+              </div>
+            </div>
+            <div id="weekChart" class="week-chart" aria-label="Attendance records over the last seven days"></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="card helper-card">
+        <div class="section-heading">
+          <div>
+            <h2>Smart HR Assistant</h2>
+            <p class="muted">Ask questions about your employee and attendance data.</p>
+          </div>
+        </div>
+
+        <div class="helper-quick-questions">
+          <button type="button" class="btn btn-secondary btn-sm quick-question">How many employees do we have?</button>
+          <button type="button" class="btn btn-secondary btn-sm quick-question">Who is on leave today?</button>
+          <button type="button" class="btn btn-secondary btn-sm quick-question">Show late employees this month</button>
+        </div>
+
+        <div id="helperMessages" class="helper-messages" aria-live="polite">
+          <p class="muted">Hello! Ask me about your HR data.</p>
+        </div>
+
+        <form id="helperForm" class="helper-form">
+          <label class="sr-only" for="helperInput">Ask the HR assistant</label>
+          <input id="helperInput" type="text" placeholder="Ask a question..." autocomplete="off" required>
+          <button type="submit" class="btn btn-primary">Ask</button>
+        </form>
+      </section>
+
+      <footer class="page-footer">
+        <p class="muted">HCM Lite · <span data-company-name>Company</span></p>
+      </footer>
+    </main>
+  </div>
+</body>
 </html>

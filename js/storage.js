@@ -16,7 +16,7 @@ const STORAGE_KEYS = {
 const DEFAULT_SETTINGS = {
   officeStartTime: "09:00",
   graceMinutes: 15,
-  halfDayAfterMinutes: 120, // office start se itne minute baad aaye to Half Day
+  halfDayAfterMinutes: 120, // Office start se itne minute baad aaye to Half Day
   leaveQuota: 20,
   workingDays: [1, 2, 3, 4, 5], // 0 = Sunday ... 6 = Saturday
 };
@@ -50,7 +50,9 @@ function removeData(key) {
 // Saara HCM data clear karo (theme ki setting rehne do)
 function clearHCMData() {
   Object.values(STORAGE_KEYS).forEach((key) => {
-    if (key !== STORAGE_KEYS.theme) localStorage.removeItem(key);
+    if (key !== STORAGE_KEYS.theme) {
+      localStorage.removeItem(key);
+    }
   });
 }
 
@@ -73,7 +75,10 @@ function getCurrentUser() {
 }
 
 function getSettings() {
-  return { ...DEFAULT_SETTINGS, ...getData(STORAGE_KEYS.settings, {}) };
+  return {
+    ...DEFAULT_SETTINGS,
+    ...getData(STORAGE_KEYS.settings, {}),
+  };
 }
 
 function getCompanyName() {
@@ -87,6 +92,7 @@ function toDateString(date = new Date()) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
+
   return `${year}-${month}-${day}`;
 }
 
@@ -99,6 +105,7 @@ function getCurrentTime() {
   const now = new Date();
   const hours = String(now.getHours()).padStart(2, "0");
   const minutes = String(now.getMinutes()).padStart(2, "0");
+
   return `${hours}:${minutes}`;
 }
 
@@ -107,6 +114,7 @@ function timeToMinutes(time) {
   const [hours, minutes] = String(time || "")
     .split(":")
     .map(Number);
+
   return hours * 60 + minutes;
 }
 
@@ -115,17 +123,25 @@ function countDays(from, to) {
   const start = new Date(`${from}T00:00:00`);
   const end = new Date(`${to}T00:00:00`);
   const days = Math.round((end - start) / 86400000) + 1;
+
   return Math.max(days, 0);
 }
 
-// Do dates ke beech sirf working days (settings ke working days ke mutabiq)
-function countWorkingDays(from, to, workingDays = getSettings().workingDays) {
+// Do dates ke beech sirf working days
+function countWorkingDays(
+  from,
+  to,
+  workingDays = getSettings().workingDays,
+) {
   let count = 0;
   const current = new Date(`${from}T00:00:00`);
   const end = new Date(`${to}T00:00:00`);
 
   while (current <= end) {
-    if (workingDays.includes(current.getDay())) count++;
+    if (workingDays.includes(current.getDay())) {
+      count++;
+    }
+
     current.setDate(current.getDate() + 1);
   }
 
@@ -142,6 +158,7 @@ function formatCurrency(amount) {
 
 function formatDate(dateString) {
   if (!dateString) return "-";
+
   return new Date(`${dateString}T00:00:00`).toLocaleDateString("en-GB", {
     day: "2-digit",
     month: "short",
@@ -193,6 +210,7 @@ function showToast(message, type = "info") {
 
   setTimeout(() => {
     toast.classList.add("hide");
+
     setTimeout(() => toast.remove(), 300);
   }, 3000);
 }

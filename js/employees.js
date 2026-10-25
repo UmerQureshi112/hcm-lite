@@ -1,70 +1,69 @@
-// js/employees.js
-// Employees page: add, edit, delete, search aur department filter.
 
 document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("employeeForm");
   const tableBody = document.getElementById("employeesTableBody");
 
-  // Sirf employees page par chalao
+  // Sirf Employees page par chalao
   if (!form || !tableBody) return;
 
   const idInput = document.getElementById("employeeId");
-  const nameInput = document.getElementById("employeeName");
+  const nameInput = document.getElementById("employeeFullName");
   const emailInput = document.getElementById("employeeEmail");
+  const departmentInput = document.getElementById("employeeDepartment");
+  const designationInput = document.getElementById("employeeDesignation");
+  const salaryInput = document.getElementById("employeeSalary");
+  const joinDateInput = document.getElementById("employeeJoinDate");
+  const statusInput = document.getElementById("employeeStatus");
   const passwordInput = document.getElementById("employeePassword");
-  const departmentInput = document.getElementById("department");
-  const salaryInput = document.getElementById("salary");
 
-  const errorEl = document.getElementById("employeeError");
-  const saveBtn = document.getElementById("saveEmployeeBtn");
-  const cancelBtn = document.getElementById("cancelEditBtn");
-  const formTitle = document.getElementById("formTitle");
-  const formCard = document.getElementById("employeeFormCard");
-
-  const searchInput = document.getElementById("searchEmployee");
-  const filterInput = document.getElementById("filterDepartment");
-  const resultCount = document.getElementById("resultCount");
-
-  const statTotal = document.getElementById("statTotal");
-  const statDepartments = document.getElementById("statDepartments");
-  const statPayroll = document.getElementById("statPayroll");
+  const errorEl = document.getElementById("employeeFormError");
+  const saveBtn = form.querySelector('[type="submit"]');
+  const addBtn = document.getElementById("addEmployeeBtn");
+  const cancelBtn = document.getElementById("cancelEmployeeBtn");
+  const formTitle = document.getElementById("employeeFormTitle");
+  const formContainer = document.getElementById("employeeFormContainer");
+  const searchInput = document.getElementById("employeeSearch");
 
   let employees = getEmployees();
 
   function showError(message = "") {
-    errorEl.textContent = message;
+    if (errorEl) errorEl.textContent = message;
   }
 
-  function isValidEmail(email) {
+  function validEmail(email) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   }
 
-  /* ---------- Summary cards ---------- */
-
-  function renderStats() {
-    const departments = new Set(employees.map((item) => item.department));
-    const payroll = employees.reduce(
-      (total, item) => total + Number(item.salary || 0),
-      0,
-    );
-
-    statTotal.textContent = employees.length;
-    statDepartments.textContent = departments.size;
-    statPayroll.textContent = formatCurrency(payroll);
+  function escapeText(value) {
+    return String(value ?? "");
   }
 
-  /* ---------- Table ---------- */
-
-  function createCell(content) {
+  // DOM element ko text mein convert karne ke bajaye append karo
+  function createCell(value) {
     const cell = document.createElement("td");
 
-    if (content instanceof Node) {
-      cell.appendChild(content);
+    if (value instanceof Node) {
+      cell.appendChild(value);
     } else {
-      cell.textContent = content ?? "";
+      cell.textContent = escapeText(value);
     }
 
     return cell;
+  }
+
+  function createBadge(value) {
+    const badge = document.createElement("span");
+    const status = value || "Active";
+
+    badge.className =
+      status === "Active"
+        ? "badge badge-success"
+        : status === "Inactive"
+          ? "badge badge-danger"
+          : "badge badge-info";
+
+    badge.textContent = status;
+    return badge;
   }
 
   function createEmployeeCell(employee) {
@@ -73,15 +72,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const avatar = document.createElement("span");
     avatar.className = "avatar avatar-sm";
-    avatar.textContent = getInitials(employee.name);
+    avatar.textContent = getInitials(employee.name || "");
 
     const info = document.createElement("div");
 
     const name = document.createElement("strong");
-    name.textContent = employee.name;
+    name.textContent = employee.name || "Unnamed Employee";
 
     const email = document.createElement("small");
-    email.textContent = employee.email;
+    email.textContent = employee.email || "";
 
     info.append(name, email);
     wrapper.append(avatar, info);
@@ -89,51 +88,46 @@ document.addEventListener("DOMContentLoaded", () => {
     return wrapper;
   }
 
-  function createBadge(text) {
-    const badge = document.createElement("span");
-    badge.className = "badge badge-info";
-    badge.textContent = text;
-    return badge;
-  }
-
   function createActions(employee) {
     const wrapper = document.createElement("div");
     wrapper.className = "row-actions";
 
-    const editButton = document.createElement("button");
-    editButton.type = "button";
-    editButton.className = "btn btn-secondary btn-sm";
-    editButton.textContent = "Edit";
-    editButton.addEventListener("click", () => startEdit(employee));
+    const editBtn = document.createElement("button");
+    editBtn.type = "button";
+    editBtn.className = "btn btn-secondary btn-sm";
+    editBtn.textContent = "Edit";
+    editBtn.addEventListener("click", () => startEdit(employee));
 
-    const deleteButton = document.createElement("button");
-    deleteButton.type = "button";
-    deleteButton.className = "btn btn-danger btn-sm";
-    deleteButton.textContent = "Delete";
-    deleteButton.addEventListener("click", () => deleteEmployee(employee));
+    const deleteBtn = document.createElement("button");
+    deleteBtn.type = "button";
+    deleteBtn.className = "btn btn-danger btn-sm";
+    deleteBtn.textContent = "Delete";
+    deleteBtn.addEventListener("click", () => deleteEmployee(employee));
 
-    wrapper.append(editButton, deleteButton);
+    wrapper.append(editBtn, deleteBtn);
     return wrapper;
   }
 
   function renderEmployees() {
-    const searchText = searchInput.value.trim().toLowerCase();
-    const selectedDepartment = filterInput.value;
+    employees = getEmployees();
+
+    const searchText = searchInput
+      ? searchInput.value.trim().toLowerCase()
+      : "";
 
     const filtered = employees.filter((employee) => {
-      const matchesSearch =
-        employee.name.toLowerCase().includes(searchText) ||
-        employee.email.toLowerCase().includes(searchText);
+      const name = String(employee.name || "").toLowerCase();
+      const email = String(employee.email || "").toLowerCase();
+      const department = String(employee.department || "").toLowerCase();
+      const designation = String(employee.designation || "").toLowerCase();
 
-      const matchesDepartment =
-        !selectedDepartment || employee.department === selectedDepartment;
-
-      return matchesSearch && matchesDepartment;
+      return (
+        name.includes(searchText) ||
+        email.includes(searchText) ||
+        department.includes(searchText) ||
+        designation.includes(searchText)
+      );
     });
-
-    resultCount.textContent = `${filtered.length} of ${employees.length} employee${
-      employees.length === 1 ? "" : "s"
-    }`;
 
     tableBody.innerHTML = "";
 
@@ -143,10 +137,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const cell = createCell(
         employees.length === 0
-          ? "No employees yet. Add your first employee above."
-          : "No employees match your search.",
+          ? "No employees yet. Add your first employee."
+          : "No employees match your search."
       );
-      cell.colSpan = 5;
+
+      // HTML table mein total 8 columns hain
+      cell.colSpan = 8;
 
       row.appendChild(cell);
       tableBody.appendChild(row);
@@ -156,108 +152,136 @@ document.addEventListener("DOMContentLoaded", () => {
     filtered.forEach((employee) => {
       const row = document.createElement("tr");
 
+      const joined = employee.joinDate || employee.createdAt;
+      let joinedText = "-";
+
+      if (joined) {
+        joinedText = formatDate(String(joined).slice(0, 10));
+      }
+
+      // HTML ke mutabiq 8 separate columns
       row.append(
         createCell(createEmployeeCell(employee)),
-        createCell(createBadge(employee.department)),
-        createCell(formatCurrency(employee.salary)),
-        createCell(
-          employee.createdAt
-            ? formatDate(employee.createdAt.slice(0, 10))
-            : "-",
-        ),
-        createCell(createActions(employee)),
+        createCell(employee.email || "-"),
+        createCell(employee.department || "-"),
+        createCell(employee.designation || "-"),
+        createCell(formatCurrency(Number(employee.salary || 0))),
+        createCell(joinedText),
+        createCell(createBadge(employee.status || "Active")),
+        createCell(createActions(employee))
       );
 
       tableBody.appendChild(row);
     });
   }
 
-  function refresh() {
-    renderStats();
-    renderEmployees();
-  }
-
-  /* ---------- Edit mode ---------- */
-
-  function startEdit(employee) {
-    idInput.value = employee.id;
-    nameInput.value = employee.name;
-    emailInput.value = employee.email;
-    departmentInput.value = employee.department;
-    salaryInput.value = employee.salary;
-
-    // Purana password dikhana nahi, khali chhodo to wahi rahega
-    passwordInput.value = "";
-    passwordInput.placeholder = "Leave blank to keep the current password";
-
-    formTitle.textContent = "Edit Employee";
-    saveBtn.textContent = "Update Employee";
-    cancelBtn.hidden = false;
-
-    showError("");
-    formCard.scrollIntoView({ behavior: "smooth", block: "start" });
-    nameInput.focus();
+  function openForm() {
+    if (formContainer) formContainer.hidden = false;
+    if (nameInput) nameInput.focus();
   }
 
   function stopEdit() {
     form.reset();
-    idInput.value = "";
-    passwordInput.placeholder = "At least 6 characters";
 
-    formTitle.textContent = "Add New Employee";
-    saveBtn.textContent = "Add Employee";
-    cancelBtn.hidden = true;
+    if (idInput) idInput.value = "";
+
+    if (passwordInput) {
+      passwordInput.value = "";
+      passwordInput.placeholder = "At least 6 characters";
+    }
+
+    if (formTitle) formTitle.textContent = "Add New Employee";
+    if (saveBtn) saveBtn.textContent = "Add Employee";
+    if (cancelBtn) cancelBtn.hidden = true;
+    if (formContainer) formContainer.hidden = true;
 
     showError("");
   }
 
-  /* ---------- Delete ---------- */
+  function startEdit(employee) {
+    openForm();
+
+    idInput.value = employee.id;
+    nameInput.value = employee.name || "";
+    emailInput.value = employee.email || "";
+    departmentInput.value = employee.department || "";
+    designationInput.value = employee.designation || "";
+    salaryInput.value = employee.salary ?? "";
+    joinDateInput.value = employee.joinDate || "";
+    statusInput.value = employee.status || "Active";
+
+    if (passwordInput) {
+      passwordInput.value = "";
+      passwordInput.placeholder = "Leave blank to keep current password";
+    }
+
+    if (formTitle) formTitle.textContent = "Edit Employee";
+    if (saveBtn) saveBtn.textContent = "Update Employee";
+    if (cancelBtn) cancelBtn.hidden = false;
+
+    showError("");
+  }
+
+  function syncEmployeeName(id, name) {
+    const attendance = getAttendance();
+    const leaves = getLeaves();
+
+    attendance.forEach((record) => {
+      if (String(record.employeeId) === String(id)) {
+        record.employeeName = name;
+      }
+    });
+
+    leaves.forEach((leave) => {
+      if (String(leave.employeeId) === String(id)) {
+        leave.employeeName = name;
+      }
+    });
+
+    saveData(STORAGE_KEYS.attendance, attendance);
+    saveData(STORAGE_KEYS.leaves, leaves);
+  }
 
   function deleteEmployee(employee) {
     const confirmed = confirm(
-      `Delete ${employee.name}?\n\nTheir attendance and leave records will also be removed.`,
+      `Delete ${employee.name}?\n\nTheir attendance and leave records will also be removed.`
     );
 
     if (!confirmed) return;
 
     const id = String(employee.id);
 
-    employees = employees.filter((item) => String(item.id) !== id);
-
-    saveData(STORAGE_KEYS.employees, employees);
-    saveData(
-      STORAGE_KEYS.attendance,
-      getAttendance().filter((record) => String(record.employeeId) !== id),
-    );
-    saveData(
-      STORAGE_KEYS.leaves,
-      getLeaves().filter((leave) => String(leave.employeeId) !== id),
+    const updatedEmployees = employees.filter(
+      (item) => String(item.id) !== id
     );
 
-    // Agar isi employee ko edit kar rahe the to form band karo
-    if (idInput.value === id) stopEdit();
+    const updatedAttendance = getAttendance().filter(
+      (record) => String(record.employeeId) !== id
+    );
 
-    refresh();
-    showToast("Employee deleted", "success");
-  }
+    const updatedLeaves = getLeaves().filter(
+      (leave) => String(leave.employeeId) !== id
+    );
 
-  /* ---------- Add / Update ---------- */
+    if (!saveData(STORAGE_KEYS.employees, updatedEmployees)) {
+      showError("Could not delete employee. Please try again.");
+      return;
+    }
 
-  // Naam badle to attendance aur leave records mein bhi naam update karo
-  function syncEmployeeName(id, name) {
-    const attendance = getAttendance();
-    const leaves = getLeaves();
+    saveData(STORAGE_KEYS.attendance, updatedAttendance);
+    saveData(STORAGE_KEYS.leaves, updatedLeaves);
 
-    attendance.forEach((record) => {
-      if (String(record.employeeId) === String(id)) record.employeeName = name;
-    });
+    employees = updatedEmployees;
 
-    leaves.forEach((leave) => {
-      if (String(leave.employeeId) === String(id)) leave.employeeName = name;
-    });
+    if (idInput && String(idInput.value) === id) {
+      stopEdit();
+    }
 
-    saveData(STORAGE_KEYS.attendance, attendance);
-    saveData(STORAGE_KEYS.leaves, leaves);
+    renderEmployees();
+
+    if (typeof showToast === "function") {
+      showToast("Employee deleted", "success");
+    }
   }
 
   form.addEventListener("submit", (event) => {
@@ -267,16 +291,19 @@ document.addEventListener("DOMContentLoaded", () => {
     const editingId = idInput.value;
     const name = nameInput.value.trim();
     const email = emailInput.value.trim().toLowerCase();
-    const password = passwordInput.value;
-    const department = departmentInput.value;
+    const department = departmentInput.value.trim();
+    const designation = designationInput.value.trim();
     const salary = Number(salaryInput.value);
+    const joinDate = joinDateInput.value;
+    const status = statusInput.value;
+    const password = passwordInput ? passwordInput.value : "";
 
-    if (!name || !email || !department || salaryInput.value === "") {
+    if (!name || !email || !department || !designation) {
       showError("Please fill in all required fields.");
       return;
     }
 
-    if (!isValidEmail(email)) {
+    if (!validEmail(email)) {
       showError("Please enter a valid email address.");
       return;
     }
@@ -296,13 +323,15 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    const adminEmail = getData(STORAGE_KEYS.admin, null)?.email;
+    const admin = getData(STORAGE_KEYS.admin, null);
+    const adminEmail = String(admin?.email || "").toLowerCase();
+
     const duplicate =
       email === adminEmail ||
       employees.some(
         (item) =>
-          item.email.toLowerCase() === email &&
-          String(item.id) !== String(editingId),
+          String(item.email || "").toLowerCase() === email &&
+          String(item.id) !== String(editingId)
       );
 
     if (duplicate) {
@@ -310,55 +339,92 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    let updatedList;
+    let updatedEmployees;
 
     if (editingId) {
-      updatedList = employees.map((item) =>
-        String(item.id) === String(editingId)
-          ? {
-              ...item,
-              name,
-              email,
-              department,
-              salary,
-              password: password || item.password,
-            }
-          : item,
-      );
+      updatedEmployees = employees.map((employee) => {
+        if (String(employee.id) !== String(editingId)) {
+          return employee;
+        }
+
+        return {
+          ...employee,
+          name,
+          email,
+          department,
+          designation,
+          salary,
+          joinDate,
+          status,
+          password: password || employee.password
+        };
+      });
     } else {
-      updatedList = [
+      updatedEmployees = [
         ...employees,
         {
           id: generateId(),
           name,
           email,
-          password,
           department,
+          designation,
           salary,
-          createdAt: new Date().toISOString(),
-        },
+          joinDate: joinDate || new Date().toISOString().slice(0, 10),
+          status: status || "Active",
+          password,
+          createdAt: new Date().toISOString()
+        }
       ];
     }
 
-    if (!saveData(STORAGE_KEYS.employees, updatedList)) {
-      showError("Could not save employee data. Check browser storage.");
+    const saved = saveData(STORAGE_KEYS.employees, updatedEmployees);
+
+    if (saved === false) {
+      showError("Could not save employee data. Please try again.");
       return;
     }
 
-    employees = updatedList;
+    employees = updatedEmployees;
 
-    if (editingId) syncEmployeeName(editingId, name);
-
-    showToast(editingId ? "Employee updated" : "Employee added", "success");
+    if (editingId) {
+      syncEmployeeName(editingId, name);
+    }
 
     stopEdit();
-    refresh();
+    renderEmployees();
+
+    if (typeof showToast === "function") {
+      showToast(
+        editingId ? "Employee updated" : "Employee added",
+        "success"
+      );
+    }
   });
 
-  cancelBtn.addEventListener("click", stopEdit);
-  form.addEventListener("input", () => showError(""));
-  searchInput.addEventListener("input", renderEmployees);
-  filterInput.addEventListener("change", renderEmployees);
+  if (addBtn) {
+    addBtn.addEventListener("click", () => {
+      stopEdit();
+      openForm();
+    });
+  }
 
-  refresh();
+  if (cancelBtn) {
+    cancelBtn.addEventListener("click", stopEdit);
+  }
+
+  if (searchInput) {
+    searchInput.addEventListener("input", renderEmployees);
+  }
+
+  form.addEventListener("input", () => showError(""));
+
+  window.addEventListener("storage", (event) => {
+    if (event.key === STORAGE_KEYS.employees) {
+      employees = getEmployees();
+      renderEmployees();
+    }
+  });
+
+  stopEdit();
+  renderEmployees();
 });

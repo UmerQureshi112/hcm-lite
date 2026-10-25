@@ -29,17 +29,13 @@ html.dark {
 }
 
 /* Page */
-
 body {
   background: var(--pay-bg);
   color: var(--pay-text);
-  transition:
-    background-color 0.25s,
-    color 0.25s;
+  transition: background-color 0.25s, color 0.25s;
 }
 
 /* Navbar */
-
 .navbar {
   display: flex;
   align-items: center;
@@ -85,7 +81,6 @@ body {
 }
 
 /* Main layout */
-
 .container {
   width: min(900px, 92%);
   margin: 32px auto;
@@ -98,7 +93,6 @@ body {
 }
 
 /* Payslip card */
-
 .payslip {
   padding: 0;
   overflow: hidden;
@@ -110,7 +104,6 @@ body {
 }
 
 /* Payslip header */
-
 .payslip-header {
   padding: 28px 24px;
   text-align: center;
@@ -132,7 +125,6 @@ body {
 }
 
 /* Employee details */
-
 .payslip-details {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -155,7 +147,6 @@ body {
 }
 
 /* Salary table */
-
 .payslip .table-wrapper {
   margin: 24px;
   overflow-x: auto;
@@ -213,7 +204,6 @@ body {
 }
 
 /* Payslip message */
-
 #payslipMessage {
   margin: 0 24px 24px;
   color: var(--pay-muted);
@@ -222,7 +212,6 @@ body {
 }
 
 /* Month selection and actions */
-
 .payslip-actions {
   display: flex;
   align-items: center;
@@ -269,9 +258,7 @@ body {
   font-size: 0.92rem;
   font-weight: 600;
   cursor: pointer;
-  transition:
-    background-color 0.2s,
-    transform 0.2s;
+  transition: background-color 0.2s, transform 0.2s;
 }
 
 .payslip-actions button:hover {
@@ -291,7 +278,6 @@ body {
 }
 
 /* Responsive */
-
 @media (max-width: 600px) {
   .navbar {
     padding: 14px 4%;
@@ -348,7 +334,6 @@ body {
 }
 
 /* Print / Save PDF */
-
 @media print {
   @page {
     size: A4;

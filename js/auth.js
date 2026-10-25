@@ -1,240 +1,355 @@
-// js/auth.js
-// Login, first-time setup, logout aur page guard.
-// Ye script <head> mein bina defer ke load hogi, taake bina login wala page dikhne se pehle hi redirect ho jaye.
 
 (function () {
-  // <script src="../js/auth.js" data-role="admin"> se page ka role milta hai.
-  // currentScript sirf script ke chalte waqt milta hai, isliye sab se pehle yahin le lo.
-  const currentScript = document.currentScript;
-  const requiredRole = currentScript?.dataset.role || "";
+  "use strict";
 
-  // auth.js ka poora address (window.location.href jaisa) nikalo,
-  // phir ek folder upar jaakar project ka root mil jata hai.
-  // Is tarah page "/" par ho, "/pages/" par ho ya file:// par, raasta hamesha sahi rahega.
-  const scriptUrl = currentScript?.src || window.location.href;
-  const ROOT_URL = new URL("../", scriptUrl).href;
+  const script = document.currentScript;
+  const requiredRole = script?.dataset?.role || "";
 
-  const LOGIN_PAGE = `${ROOT_URL}index.html`;
+  const scriptURL = script?.src
+    ? new URL(script.src, window.location.href)
+    : new URL("../js/auth.js", window.location.href);
 
-  const HOME_PAGE = {
-    admin: `${ROOT_URL}pages/admin.html`,
-    employee: `${ROOT_URL}pages/employee.html`,
-  };
+  const ROOT_URL = new URL("../", scriptURL).href;
+  const LOGIN_PAGE = new URL("index.html", ROOT_URL).href;
+  const ADMIN_PAGE = new URL("pages/admin.html", ROOT_URL).href;
+  const EMPLOYEE_PAGE = new URL("pages/employee.html", ROOT_URL).href;
+  const SETUP_PAGE = new URL("setup.html", ROOT_URL).href;
 
-  /* ---------- Session ---------- */
+  function getStoredData(key, fallback = null) {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch (error) {
+      console.error(`Unable to read ${key}:`, error);
+      return fallback;
+    }
+  }
 
-  // Sirf wahi user wapas deta hai jo abhi bhi system mein maujood ho
+  function saveStoredData(key, value) {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+      return true;
+    } catch (error) {
+      console.error(`Unable to save ${key}:`, error);
+      return false;
+    }
+  }
+
+  function getAdmin() {
+    return getStoredData("hcm_admin");
+  }
+
+  function getEmployees() {
+    const employees = getStoredData("hcm_employees", []);
+    return Array.isArray(employees) ? employees : [];
+  }
+
+  function getCurrentUser() {
+    return getStoredData("hcm_currentUser");
+  }
+
+  function clearCurrentUser() {
+    localStorage.removeItem("hcm_currentUser");
+  }
+
   function getValidUser() {
     const user = getCurrentUser();
-    if (!user) return null;
+
+    if (!user || !user.id || !user.role) {
+      return null;
+    }
 
     if (user.role === "admin") {
-      const admin = getData(STORAGE_KEYS.admin, null);
-      return admin && admin.email === user.email ? user : null;
+      const admin = getAdmin();
+
+      if (!admin || admin.email?.toLowerCase() !== user.email?.toLowerCase()) {
+        clearCurrentUser();
+        return null;
+      }
+
+      return user;
     }
 
     if (user.role === "employee") {
-      const exists = getEmployees().some(
-        (employee) => String(employee.id) === String(user.id),
+      const employee = getEmployees().find(
+        (item) =>
+          String(item.id) === String(user.id) &&
+          item.email?.toLowerCase() === user.email?.toLowerCase()
       );
-      return exists ? user : null;
+
+      if (!employee || employee.status === "Inactive") {
+        clearCurrentUser();
+        return null;
+      }
+
+      return {
+        ...user,
+        name: employee.name || employee.fullName || user.name,
+        email: employee.email,
+        role: "employee"
+      };
     }
 
+    clearCurrentUser();
     return null;
   }
 
-  function logout() {
-    removeData(STORAGE_KEYS.currentUser);
-    window.location.href = LOGIN_PAGE;
-  }
+  function startSession(user, role) {
+    const session = {
+      id: user.id,
+      name: user.name || user.fullName || "User",
+      email: user.email,
+      role
+    };
 
-  // Doosri files bhi logout() call kar sakti hain
-  window.logout = logout;
-
-  /* ---------- Page guard ---------- */
-
-  const user = getValidUser();
-
-  // Purana ya kharab session saaf kar do
-  if (!user && getCurrentUser()) {
-    removeData(STORAGE_KEYS.currentUser);
-  }
-
-  if (requiredRole) {
-    // replace() se back button dabane par guard wala page dobara nahi khulta
-    if (!user) {
-      window.location.replace(LOGIN_PAGE);
+    if (!saveStoredData("hcm_currentUser", session)) {
+      showError("Unable to save your session. Please check browser storage.");
       return;
     }
 
-    if (requiredRole !== "any" && user.role !== requiredRole) {
-      window.location.replace(HOME_PAGE[user.role]);
-      return;
+    window.location.href =
+      role === "admin" ? ADMIN_PAGE : EMPLOYEE_PAGE;
+  }
+
+  function showError(message) {
+    const errorElement =
+      document.getElementById("loginError") ||
+      document.getElementById("setupError") ||
+      document.getElementById("formError");
+
+    if (errorElement) {
+      errorElement.textContent = message;
+      errorElement.style.display = "block";
+    } else {
+      alert(message);
     }
   }
 
-  /* ---------- Page ka common kaam ---------- */
+  function hideError() {
+    const errorElement =
+      document.getElementById("loginError") ||
+      document.getElementById("setupError") ||
+      document.getElementById("formError");
 
-  function setupLogoutButtons() {
-    document
-      .querySelectorAll("#logoutBtn, [data-logout]")
-      .forEach((button) => button.addEventListener("click", logout));
+    if (errorElement) {
+      errorElement.textContent = "";
+      errorElement.style.display = "none";
+    }
   }
-
-  // Header mein user ka naam, role aur company ka naam bharo
-  function fillUserInfo() {
-    if (!user) return;
-
-    document.querySelectorAll("[data-user-name]").forEach((el) => {
-      el.textContent = user.name;
-    });
-
-    document.querySelectorAll("[data-user-role]").forEach((el) => {
-      el.textContent = user.role === "admin" ? "Administrator" : "Employee";
-    });
-
-    document.querySelectorAll("[data-user-initials]").forEach((el) => {
-      el.textContent = getInitials(user.name);
-    });
-
-    document.querySelectorAll("[data-company-name]").forEach((el) => {
-      el.textContent = getCompanyName();
-    });
-  }
-
-  /* ---------- Login page (index.html) ---------- */
 
   function setupLoginPage() {
-    const setupSection = document.getElementById("setupSection");
-    const loginSection = document.getElementById("loginSection");
-    const setupForm = document.getElementById("setupForm");
     const loginForm = document.getElementById("loginForm");
 
-    if (!setupForm || !loginForm) return;
+    if (!loginForm) return;
 
-    // Pehle se login hai to seedha dashboard par bhejo
-    if (user) {
-      window.location.href = HOME_PAGE[user.role];
+    const existingUser = getValidUser();
+
+    if (existingUser) {
+      window.location.replace(
+        existingUser.role === "admin" ? ADMIN_PAGE : EMPLOYEE_PAGE
+      );
       return;
     }
 
-    const setupError = document.getElementById("setupError");
-    const loginError = document.getElementById("loginError");
-
-    // Admin pehle se bana hai to login dikhao, warna setup
-    function showCorrectSection() {
-      const adminExists = Boolean(getData(STORAGE_KEYS.admin, null));
-      setupSection.hidden = adminExists;
-      loginSection.hidden = !adminExists;
-    }
-
-    function readValue(id) {
-      return document.getElementById(id)?.value ?? "";
-    }
-
-    function startSession(sessionUser) {
-      saveData(STORAGE_KEYS.currentUser, sessionUser);
-      window.location.href = HOME_PAGE[sessionUser.role];
-    }
-
-    // Typing shuru karte hi purana error hata do
-    setupForm.addEventListener("input", () => (setupError.textContent = ""));
-    loginForm.addEventListener("input", () => (loginError.textContent = ""));
-
-    // Company aur admin setup
-    setupForm.addEventListener("submit", (event) => {
+    loginForm.addEventListener("submit", function (event) {
       event.preventDefault();
-      setupError.textContent = "";
+      hideError();
 
-      const companyName = readValue("companyName").trim();
-      const adminName = readValue("adminName").trim();
-      const adminEmail = readValue("adminEmail").trim().toLowerCase();
-      const adminPassword = readValue("adminPassword");
+      const emailInput = document.getElementById("loginEmail");
+      const passwordInput = document.getElementById("loginPassword");
 
-      if (getData(STORAGE_KEYS.admin, null)) {
-        setupError.textContent = "Company is already set up. Please log in.";
-        showCorrectSection();
-        return;
-      }
-
-      if (!companyName || !adminName || !adminEmail || !adminPassword) {
-        setupError.textContent = "Please fill in all fields.";
-        return;
-      }
-
-      if (adminPassword.length < 6) {
-        setupError.textContent = "Password must be at least 6 characters.";
-        return;
-      }
-
-      const admin = {
-        name: adminName,
-        email: adminEmail,
-        password: adminPassword,
-        role: "admin",
-      };
-
-      const saved =
-        saveData(STORAGE_KEYS.company, { name: companyName }) &&
-        saveData(STORAGE_KEYS.admin, admin) &&
-        saveData(STORAGE_KEYS.employees, getEmployees()) &&
-        saveData(STORAGE_KEYS.attendance, getAttendance()) &&
-        saveData(STORAGE_KEYS.leaves, getLeaves()) &&
-        saveData(STORAGE_KEYS.settings, { ...DEFAULT_SETTINGS });
-
-      if (!saved) {
-        setupError.textContent = "Could not save data. Check browser storage.";
-        return;
-      }
-
-      // Setup ke baad admin khud login ho jata hai
-      startSession({ name: admin.name, email: admin.email, role: "admin" });
-    });
-
-    // Login
-    loginForm.addEventListener("submit", (event) => {
-      event.preventDefault();
-      loginError.textContent = "";
-
-      const email = readValue("email").trim().toLowerCase();
-      const password = readValue("password");
+      const email = emailInput?.value.trim().toLowerCase();
+      const password = passwordInput?.value;
 
       if (!email || !password) {
-        loginError.textContent = "Enter your email and password.";
+        showError("Please enter your email and password.");
         return;
       }
 
-      const admin = getData(STORAGE_KEYS.admin, null);
+      const admin = getAdmin();
 
-      if (admin && admin.email === email && admin.password === password) {
-        startSession({ name: admin.name, email: admin.email, role: "admin" });
+      if (
+        admin &&
+        admin.email?.toLowerCase() === email &&
+        admin.password === password
+      ) {
+        startSession(
+          {
+            id: admin.id || "admin",
+            name: admin.name || admin.fullName || "Admin",
+            email: admin.email
+          },
+          "admin"
+        );
         return;
       }
 
       const employee = getEmployees().find(
         (item) =>
-          item.email?.toLowerCase() === email && item.password === password,
+          item.email?.toLowerCase() === email &&
+          item.password === password &&
+          item.status !== "Inactive"
       );
 
       if (employee) {
-        startSession({
-          id: employee.id,
-          name: employee.name,
-          email: employee.email,
-          role: "employee",
-        });
+        startSession(
+          {
+            id: employee.id,
+            name: employee.name || employee.fullName || "Employee",
+            email: employee.email
+          },
+          "employee"
+        );
         return;
       }
 
-      loginError.textContent = "Invalid email or password.";
+      showError("Invalid email or password, or your account is inactive.");
     });
-
-    showCorrectSection();
   }
 
-  document.addEventListener("DOMContentLoaded", () => {
+  function setupSetupPage() {
+    const setupForm = document.getElementById("setupForm");
+
+    if (!setupForm) return;
+
+    const admin = getAdmin();
+
+    if (admin) {
+      const setupSection = document.getElementById("setupSection");
+      const loginSection = document.getElementById("loginSection");
+
+      if (setupSection) setupSection.style.display = "none";
+      if (loginSection) loginSection.style.display = "block";
+
+      return;
+    }
+
+    setupForm.addEventListener("submit", function (event) {
+      event.preventDefault();
+      hideError();
+
+      const name =
+        document.getElementById("adminName")?.value.trim() || "";
+      const email =
+        document.getElementById("adminEmail")?.value.trim().toLowerCase() || "";
+      const password =
+        document.getElementById("adminPassword")?.value || "";
+      const confirmPassword =
+        document.getElementById("confirmPassword")?.value || "";
+
+      if (!name || !email || !password || !confirmPassword) {
+        showError("Please complete all required fields.");
+        return;
+      }
+
+      if (password.length < 8) {
+        showError("Password must contain at least 8 characters.");
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        showError("Passwords do not match.");
+        return;
+      }
+
+      const newAdmin = {
+        id: "admin",
+        name,
+        email,
+        password,
+        role: "admin"
+      };
+
+      if (!saveStoredData("hcm_admin", newAdmin)) {
+        showError("Unable to save admin details. Please try again.");
+        return;
+      }
+
+      alert("Admin account created successfully. Please log in.");
+      window.location.href = LOGIN_PAGE;
+    });
+  }
+
+  function protectPage() {
+    const user = getValidUser();
+
+    if (!user) {
+      window.location.replace(LOGIN_PAGE);
+      return;
+    }
+
+    if (requiredRole && requiredRole !== "any" && user.role !== requiredRole) {
+      window.location.replace(
+        user.role === "admin" ? ADMIN_PAGE : EMPLOYEE_PAGE
+      );
+      return;
+    }
+
+    fillUserInfo(user);
     setupLogoutButtons();
-    fillUserInfo();
-    setupLoginPage();
-  });
+  }
+
+  function fillUserInfo(user) {
+    const name = user.name || user.fullName || "User";
+
+    [
+      "adminName",
+      "employeeName",
+      "welcomeName",
+      "userName",
+      "profileName"
+    ].forEach((id) => {
+      const element = document.getElementById(id);
+      if (element) element.textContent = name;
+    });
+
+    const emailElement = document.getElementById("profileEmail");
+    if (emailElement) emailElement.textContent = user.email || "";
+
+    const roleElement = document.getElementById("userRole");
+    if (roleElement) {
+      roleElement.textContent =
+        user.role === "admin" ? "Administrator" : "Employee";
+    }
+  }
+
+  function setupLogoutButtons() {
+    const logoutButtons = document.querySelectorAll(
+      "#logoutBtn, #logoutButton, [data-logout]"
+    );
+
+    logoutButtons.forEach((button) => {
+      button.addEventListener("click", function (event) {
+        event.preventDefault();
+        clearCurrentUser();
+        window.location.replace(LOGIN_PAGE);
+      });
+    });
+  }
+
+  function initializeAuth() {
+    const path = window.location.pathname.toLowerCase();
+
+    if (path.endsWith("/setup.html") || path.endsWith("setup.html")) {
+      setupSetupPage();
+      return;
+    }
+
+    if (
+      path.endsWith("/index.html") ||
+      path.endsWith("index.html") ||
+      path.endsWith("/")
+    ) {
+      setupLoginPage();
+      return;
+    }
+
+    protectPage();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initializeAuth);
+  } else {
+    initializeAuth();
+  }
 })();
