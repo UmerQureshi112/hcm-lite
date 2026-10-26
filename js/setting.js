@@ -1,5 +1,5 @@
 // js/settings.js
-// Company settings: load, validate aur save. Sirf settings page par chalti hai.
+// Company settings: load, validate, save and preview.
 
 document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("settingsForm");
@@ -20,7 +20,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const ruleHalf = document.getElementById("ruleHalf");
   const ruleDays = document.getElementById("ruleDays");
 
-  // 570 ko "09:30" banata hai
+  const DEFAULT_SETTINGS = {
+    officeStartTime: "09:00",
+    graceMinutes: 15,
+    halfDayAfterMinutes: 120,
+    leaveQuota: 12,
+    workingDays: [1, 2, 3, 4, 5]
+  };
+
   function minutesToTime(total) {
     const safe = ((total % 1440) + 1440) % 1440;
     const hours = String(Math.floor(safe / 60)).padStart(2, "0");
@@ -34,40 +41,80 @@ document.addEventListener("DOMContentLoaded", () => {
       .map((box) => Number(box.value));
   }
 
-  // Saved settings form mein bharo
-  function fillForm() {
-    const settings = getSettings();
+  function getSafeSettings() {
+    const saved = getSettings() || {};
 
-    companyInput.value = getCompanyName();
-    startInput.value = settings.officeStartTime;
-    graceInput.value = settings.graceMinutes;
-    halfDayInput.value = settings.halfDayAfterMinutes;
-    quotaInput.value = settings.leaveQuota;
+    return {
+      officeStartTime:
+        saved.officeStartTime || DEFAULT_SETTINGS.officeStartTime,
+      graceMinutes:
+        Number.isFinite(Number(saved.graceMinutes))
+          ? Number(saved.graceMinutes)
+          : DEFAULT_SETTINGS.graceMinutes,
+      halfDayAfterMinutes:
+        Number.isFinite(Number(saved.halfDayAfterMinutes))
+          ? Number(saved.halfDayAfterMinutes)
+          : DEFAULT_SETTINGS.halfDayAfterMinutes,
+      leaveQuota:
+        Number.isFinite(Number(saved.leaveQuota))
+          ? Number(saved.leaveQuota)
+          : DEFAULT_SETTINGS.leaveQuota,
+      workingDays:
+        Array.isArray(saved.workingDays) && saved.workingDays.length
+          ? saved.workingDays.map(Number)
+          : DEFAULT_SETTINGS.workingDays
+    };
+  }
+
+  function fillForm() {
+    const settings = getSafeSettings();
+
+    if (companyInput) {
+      companyInput.value = getCompanyName() || "";
+    }
+
+    if (startInput) startInput.value = settings.officeStartTime;
+    if (graceInput) graceInput.value = settings.graceMinutes;
+    if (halfDayInput) halfDayInput.value = settings.halfDayAfterMinutes;
+    if (quotaInput) quotaInput.value = settings.leaveQuota;
 
     dayBoxes.forEach((box) => {
       box.checked = settings.workingDays.includes(Number(box.value));
     });
   }
 
-  // Right side ka live preview
   function updatePreview() {
-    ruleDays.textContent = getSelectedDays().length;
+    const selectedDays = getSelectedDays();
 
-    if (!startInput.value) return;
+    if (ruleDays) {
+      ruleDays.textContent = selectedDays.length;
+    }
+
+    if (!startInput?.value) return;
 
     const start = timeToMinutes(startInput.value);
-    const grace = Number(graceInput.value) || 0;
-    const halfDay = Number(halfDayInput.value) || 0;
+    const grace = Number(graceInput?.value) || 0;
+    const halfDay = Number(halfDayInput?.value) || 0;
 
-    rulePresent.textContent = minutesToTime(start + grace);
-    ruleLate.textContent = minutesToTime(start + halfDay);
-    ruleHalf.textContent = minutesToTime(start + halfDay);
+    if (rulePresent) {
+      rulePresent.textContent = minutesToTime(start + grace);
+    }
+
+    if (ruleLate) {
+      ruleLate.textContent = minutesToTime(start + grace);
+    }
+
+    if (ruleHalf) {
+      ruleHalf.textContent = minutesToTime(start + halfDay);
+    }
   }
 
   function clearMessages() {
-    errorEl.textContent = "";
-    messageEl.textContent = "";
-    messageEl.classList.remove("success");
+    if (errorEl) errorEl.textContent = "";
+    if (messageEl) {
+      messageEl.textContent = "";
+      messageEl.classList.remove("success");
+    }
   }
 
   form.addEventListener("input", () => {
@@ -75,85 +122,106 @@ document.addEventListener("DOMContentLoaded", () => {
     updatePreview();
   });
 
+  form.addEventListener("change", updatePreview);
+
   form.addEventListener("submit", (event) => {
     event.preventDefault();
     clearMessages();
 
-    const companyName = companyInput.value.trim();
-    const officeStartTime = startInput.value;
-    const graceMinutes = Number(graceInput.value);
-    const halfDayAfterMinutes = Number(halfDayInput.value);
-    const leaveQuota = Number(quotaInput.value);
+    const companyName = companyInput?.value.trim() || "";
+    const officeStartTime = startInput?.value || "";
+    const graceMinutes = Number(graceInput?.value);
+    const halfDayAfterMinutes = Number(halfDayInput?.value);
+    const leaveQuota = Number(quotaInput?.value);
     const workingDays = getSelectedDays();
 
+    function fail(message) {
+      if (errorEl) errorEl.textContent = message;
+      else alert(message);
+    }
+
     if (!companyName) {
-      errorEl.textContent = "Please enter the company name.";
+      fail("Please enter the company name.");
       return;
     }
 
     if (!officeStartTime) {
-      errorEl.textContent = "Please choose the office start time.";
+      fail("Please choose the office start time.");
       return;
     }
 
     if (
-      graceInput.value === "" ||
+      graceInput?.value === "" ||
       !Number.isInteger(graceMinutes) ||
       graceMinutes < 0
     ) {
-      errorEl.textContent = "Grace minutes must be 0 or more.";
+      fail("Grace minutes must be a whole number of 0 or more.");
       return;
     }
 
     if (
+      halfDayInput?.value === "" ||
       !Number.isInteger(halfDayAfterMinutes) ||
       halfDayAfterMinutes <= graceMinutes
     ) {
-      errorEl.textContent =
-        "Half day minutes must be a whole number greater than the grace minutes.";
+      fail("Half-day minutes must be greater than grace minutes.");
       return;
     }
 
     if (
-      quotaInput.value === "" ||
+      quotaInput?.value === "" ||
       !Number.isInteger(leaveQuota) ||
       leaveQuota < 0
     ) {
-      errorEl.textContent = "Leave quota must be 0 or more.";
+      fail("Leave quota must be a whole number of 0 or more.");
       return;
     }
 
     if (workingDays.length === 0) {
-      errorEl.textContent = "Select at least one working day.";
+      fail("Select at least one working day.");
       return;
     }
 
-    const saved =
-      saveData(STORAGE_KEYS.settings, {
+    try {
+      const settingsSaved = saveData(STORAGE_KEYS.settings, {
         officeStartTime,
         graceMinutes,
         halfDayAfterMinutes,
         leaveQuota,
-        workingDays,
-      }) &&
-      saveData(STORAGE_KEYS.company, {
-        ...getData(STORAGE_KEYS.company, {}),
-        name: companyName,
+        workingDays
       });
 
-    if (!saved) {
-      errorEl.textContent = "Could not save settings. Check browser storage.";
+      const existingCompany = getData(STORAGE_KEYS.company, {}) || {};
+
+      const companySaved = saveData(STORAGE_KEYS.company, {
+        ...existingCompany,
+        name: companyName
+      });
+
+      if (!settingsSaved || !companySaved) {
+        fail("Could not save settings. Check browser storage.");
+        return;
+      }
+    } catch (error) {
+      console.error("Settings save failed:", error);
+      fail("Could not save settings. Check browser storage.");
       return;
     }
 
-    // Sidebar mein company ka naam foran badal do
-    document.querySelectorAll("[data-company-name]").forEach((el) => {
-      el.textContent = companyName;
+    document.querySelectorAll("[data-company-name]").forEach((element) => {
+      element.textContent = companyName;
     });
 
-    messageEl.textContent = "Settings saved successfully.";
-    messageEl.classList.add("success");
-    showToast("Settings saved", "success");
+    if (messageEl) {
+      messageEl.textContent = "Settings saved successfully.";
+      messageEl.classList.add("success");
+    }
+
+    if (typeof showToast === "function") {
+      showToast("Settings saved", "success");
+    }
+
+    updatePreview();
   });
 
   fillForm();
