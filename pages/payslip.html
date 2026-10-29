@@ -1,166 +1,243 @@
-l<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Monthly Payslip - HCM Lite</title>
+    <link rel="stylesheet" href="../css/style.css" />
+  </head>
+  <body>
+    <div class="app-container">
+      <aside class="sidebar" id="appSidebar">
+        <div class="sidebar-header">
+          <a href="admin.html" class="brand-badge" id="sidebarBrandLink">
+            <div class="brand-icon">⚡</div>
+            <div>
+              <div class="brand-text">HCM Lite</div>
+              <span class="brand-subtitle company-name-display">Acme Corp</span>
+            </div>
+          </a>
+          <button type="button" class="sidebar-close-btn" id="sidebarCloseBtn">
+            &times;
+          </button>
+        </div>
 
-  <title>HCM Lite | Payslip</title>
+        <nav class="sidebar-nav" id="sidebarNavLinks"></nav>
 
-  <link rel="stylesheet" href="../css/style.css" />
-  <link rel="stylesheet" href="../css/payslip.css" />
+        <div class="sidebar-footer">
+          <div class="user-profile-summary">
+            <div class="user-avatar" id="navAvatar">US</div>
+            <div class="user-info-text">
+              <div class="user-name" id="navUserName">User</div>
+              <div class="user-role-badge" id="navUserRole">Role</div>
+            </div>
+          </div>
+        </div>
+      </aside>
 
-  <script src="../js/storage.js"></script>
- <script src="../js/auth.js" data-role="any"></script>
-  <script src="../js/theme.js" defer></script>
-  <script src="../js/attendance.js" defer></script>
-  <script src="../js/payslip.js" defer></script>
-</head>
+      <div class="main-wrapper">
+        <header class="topbar">
+          <div class="topbar-left">
+            <button type="button" class="mobile-menu-btn" id="mobileMenuBtn">
+              ☰
+            </button>
+            <h1 class="page-title">Monthly Payroll Statement</h1>
+          </div>
+          <div class="topbar-right">
+            <button
+              type="button"
+              class="btn btn-outline btn-sm theme-toggle-btn"
+            >
+              <span class="icon">🌙</span>
+              <span class="theme-text">Dark Mode</span>
+            </button>
+            <button type="button" class="btn btn-outline btn-sm logout-btn">
+              🚪 Sign Out
+            </button>
+          </div>
+        </header>
 
-<body>
-  <header class="navbar">
-    <h1>HCM Lite</h1>
+        <main class="page-content">
+          <div class="card no-print" style="margin-bottom: 1.5rem">
+            <div class="card-body" style="padding: 1.25rem">
+              <div
+                style="
+                  display: flex;
+                  gap: 1rem;
+                  flex-wrap: wrap;
+                  align-items: flex-end;
+                  justify-content: space-between;
+                "
+              >
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap; flex: 1">
+                  <div
+                    class="form-group"
+                    id="payslipEmployeeSelectorGroup"
+                    style="margin-bottom: 0; min-width: 250px"
+                  >
+                    <label class="form-label" for="payslipEmployeeSelect"
+                      >Select Employee</label
+                    >
+                    <select
+                      id="payslipEmployeeSelect"
+                      class="form-control"
+                    ></select>
+                  </div>
 
-    <nav aria-label="Main navigation">
-      <a href="../index.html">Home</a>
-      <a href="admin.html">Dashboard</a>
-      <a href="employees.html">Employees</a>
-      <a href="leaves.html">Leaves</a>
-      <a href="payslip.html">Payslip</a>
-      <a href="settings.html">Settings</a>
-    </nav>
+                  <div
+                    class="form-group"
+                    style="margin-bottom: 0; min-width: 150px"
+                  >
+                    <label class="form-label" for="payslipMonthSelect"
+                      >Payroll Month</label
+                    >
+                    <select id="payslipMonthSelect" class="form-control">
+                      <option value="1">January</option>
+                      <option value="2">February</option>
+                      <option value="3">March</option>
+                      <option value="4">April</option>
+                      <option value="5">May</option>
+                      <option value="6">June</option>
+                      <option value="7">July</option>
+                      <option value="8">August</option>
+                      <option value="9">September</option>
+                      <option value="10">October</option>
+                      <option value="11">November</option>
+                      <option value="12">December</option>
+                    </select>
+                  </div>
 
-    <button type="button" id="themeToggle">Toggle Theme</button>
-  </header>
+                  <div
+                    class="form-group"
+                    style="margin-bottom: 0; min-width: 120px"
+                  >
+                    <label class="form-label" for="payslipYearSelect"
+                      >Payroll Year</label
+                    >
+                    <select
+                      id="payslipYearSelect"
+                      class="form-control"
+                    ></select>
+                  </div>
+                </div>
 
-  <main class="container">
-    <h2>Employee Payslip</h2>
+                <div>
+                  <button
+                    type="button"
+                    class="btn btn-primary"
+                    id="printPayslipBtn"
+                  >
+                    🖨️ Print / Save as PDF
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
 
-    <section class="payslip-actions">
-      <div id="employeeField">
-        <label for="payslipEmployeeSelect">Select Employee</label>
-        <select id="payslipEmployeeSelect">
-          <option value="">Select an employee</option>
-        </select>
+          <div id="payslipDocumentContainer"></div>
+
+          <div id="payslipEmptyState" class="empty-state" style="display: none">
+            <div class="empty-state-icon">📄</div>
+            <div class="empty-state-title">No Payslip Available</div>
+            <p class="empty-state-text">
+              Please select an employee and payroll period to generate the
+              official salary slip.
+            </p>
+          </div>
+        </main>
       </div>
+    </div>
 
-      <label for="payslipMonthInput">Salary Month</label>
-      <input
-        type="month"
-        id="payslipMonthInput"
-        required
-      />
+    <script src="../js/storage.js"></script>
+    <script src="../js/auth.js"></script>
+    <script src="../js/attendance.js"></script>
+    <script src="../js/leave.js"></script>
+    <script src="../js/payslip.js"></script>
+    <script src="../js/helper.js"></script>
 
-      <button type="button" id="printPayslipBtn">
-        Print / Save PDF
-      </button>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        if (!AuthService.requireAuth("any")) return;
 
-      <p id="controlsHint">Select an employee and month to view the payslip.</p>
-    </section>
+        const session = AuthService.getSession();
+        const company = StorageService.getCompany() || {};
 
-    <p id="payslipMessage" role="status" aria-live="polite"></p>
+        const companyDisplays = document.querySelectorAll(
+          ".company-name-display",
+        );
+        companyDisplays.forEach(
+          (el) => (el.textContent = company.companyName || "Acme Corp"),
+        );
 
-    <p id="payslipEmpty" hidden>
-      No payslip data is available for the selected employee and month.
-    </p>
+        if (session) {
+          document.getElementById("navUserName").textContent = session.fullName;
+          document.getElementById("navUserRole").textContent =
+            session.role === "admin" ? "Administrator" : "Staff Employee";
+          const initials = session.fullName
+            .split(" ")
+            .map((n) => n[0])
+            .join("")
+            .substring(0, 2)
+            .toUpperCase();
+          document.getElementById("navAvatar").textContent = initials;
+        }
 
-    <section class="payslip" id="payslipContent" hidden>
-      <header class="payslip-header">
-        <h2 id="payslipCompany">HCM Lite</h2>
-        <p>Monthly Salary Statement</p>
-        <p id="payslipMonth"></p>
-      </header>
+        const navContainer = document.getElementById("sidebarNavLinks");
+        const brandLink = document.getElementById("sidebarBrandLink");
 
-      <section class="payslip-details">
-        <p><strong>Employee:</strong> <span id="payslipEmployee">—</span></p>
-        <p><strong>Department:</strong> <span id="payslipDepartment">—</span></p>
-        <p><strong>Email:</strong> <span id="payslipEmail">—</span></p>
-        <p><strong>Date Joined:</strong> <span id="payslipJoined">—</span></p>
-      </section>
+        if (session.role === "admin") {
+          brandLink.href = "admin.html";
+          navContainer.innerHTML = `
+          <div class="nav-section-title">Main Menu</div>
+          <a href="admin.html" class="nav-item">
+            <span class="icon">📊</span>
+            <span>Dashboard</span>
+          </a>
+          <a href="employees.html" class="nav-item">
+            <span class="icon">👥</span>
+            <span>Manage Employees</span>
+          </a>
+          <a href="leaves.html" class="nav-item">
+            <span class="icon">📅</span>
+            <span>Leave Requests</span>
+          </a>
+          <a href="payslip.html" class="nav-item active">
+            <span class="icon">💰</span>
+            <span>Monthly Payslips</span>
+          </a>
+          <a href="settings.html" class="nav-item">
+            <span class="icon">⚙️</span>
+            <span>Company Settings</span>
+          </a>
+        `;
+        } else {
+          brandLink.href = "employee.html";
+          navContainer.innerHTML = `
+          <div class="nav-section-title">Self-Service</div>
+          <a href="employee.html" class="nav-item">
+            <span class="icon">👤</span>
+            <span>My Portal</span>
+          </a>
+          <a href="payslip.html" class="nav-item active">
+            <span class="icon">💰</span>
+            <span>My Payslip</span>
+          </a>
+        `;
+        }
 
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th scope="col">Attendance Summary</th>
-              <th scope="col">Days</th>
-            </tr>
-          </thead>
+        PayslipModule.init();
 
-          <tbody>
-            <tr>
-              <td>Working Days</td>
-              <td id="workingDays">0</td>
-            </tr>
-            <tr>
-              <td>Recorded Attendance</td>
-              <td id="countedDays">0</td>
-            </tr>
-            <tr>
-              <td>Present Days</td>
-              <td id="presentDays">0</td>
-            </tr>
-            <tr>
-              <td>Late Days</td>
-              <td id="lateDays">0</td>
-            </tr>
-            <tr>
-              <td>Half Days</td>
-              <td id="halfDays">0</td>
-            </tr>
-            <tr>
-              <td>Approved Leave Days</td>
-              <td id="leaveDays">0</td>
-            </tr>
-            <tr>
-              <td>Absent Days</td>
-              <td id="absentDays">0</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+        const mobileBtn = document.getElementById("mobileMenuBtn");
+        const sidebarCloseBtn = document.getElementById("sidebarCloseBtn");
+        const sidebar = document.getElementById("appSidebar");
 
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th scope="col">Salary Details</th>
-              <th scope="col">Amount</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            <tr>
-              <td>Monthly Salary</td>
-              <td id="monthlySalary">Rs. 0</td>
-            </tr>
-            <tr>
-              <td>Daily Salary</td>
-              <td id="dailySalary">Rs. 0</td>
-            </tr>
-            <tr>
-              <td>Absent Deduction</td>
-              <td id="absentDeduction">Rs. 0</td>
-            </tr>
-            <tr>
-              <td>Half-Day Deduction</td>
-              <td id="halfDayDeduction">Rs. 0</td>
-            </tr>
-            <tr>
-              <td>Total Deduction</td>
-              <td id="salaryDeduction">Rs. 0</td>
-            </tr>
-            <tr>
-              <th scope="row">Net Salary</th>
-              <th id="netSalary">Rs. 0</th>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <p id="payslipNote">
-        This payslip is generated from attendance and salary data saved in this browser.
-      </p>
-    </section>
-  </main>
-</body>
+        mobileBtn?.addEventListener("click", () =>
+          sidebar.classList.add("open"),
+        );
+        sidebarCloseBtn?.addEventListener("click", () =>
+          sidebar.classList.remove("open"),
+        );
+      });
+    </script>
+  </body>
 </html>

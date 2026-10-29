@@ -1,190 +1,385 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HCM Lite | Settings</title>
-
-  <link rel="stylesheet" href="../css/style.css">
-  <link rel="stylesheet" href="../css/setting.css">
-
-  <script src="../js/storage.js"></script>
-  <script src="../js/auth.js" data-role="admin"></script>
-  <script src="../js/theme.js" defer></script>
-  <script src="../js/settings.js" defer></script>
-</head>
-
-<body>
-  <div class="app-layout">
-    <aside class="sidebar">
-      <div class="sidebar-brand">
-        <div class="brand-icon">H</div>
-        <span>HCM Lite</span>
-      </div>
-
-      <nav class="sidebar-nav">
-        <a href="admin.html" class="nav-link">
-          <span>▦</span> Dashboard
-        </a>
-        <a href="employees.html" class="nav-link">
-          <span>♙</span> Employees
-        </a>
-        <a href="leaves.html" class="nav-link">
-          <span>▣</span> Leave Management
-        </a>
-        <a href="payslip.html" class="nav-link">
-          <span>▤</span> Payroll
-        </a>
-        <a href="settings.html" class="nav-link active">
-          <span>⚙</span> Settings
-        </a>
-      </nav>
-
-      <div class="sidebar-footer">
-        <button id="themeToggle" class="nav-link" type="button">
-          <span>◐</span> Toggle Theme
-        </button>
-        <button id="logoutBtn" class="nav-link" type="button">
-          <span>↪</span> Logout
-        </button>
-      </div>
-    </aside>
-
-    <main class="main-content">
-      <header class="topbar">
-        <div>
-          <h1>Settings</h1>
-          <p class="muted">Configure your HCM Lite workspace.</p>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Company Settings - HCM Lite</title>
+    <link rel="stylesheet" href="../css/style.css" />
+  </head>
+  <body>
+    <div class="app-container">
+      <aside class="sidebar" id="appSidebar">
+        <div class="sidebar-header">
+          <a href="admin.html" class="brand-badge">
+            <div class="brand-icon">⚡</div>
+            <div>
+              <div class="brand-text">HCM Lite</div>
+              <span class="brand-subtitle company-name-display">Acme Corp</span>
+            </div>
+          </a>
+          <button type="button" class="sidebar-close-btn" id="sidebarCloseBtn">
+            &times;
+          </button>
         </div>
-      </header>
 
-      <section class="card">
-        <h2>Company Settings</h2>
-        <p class="muted">Update your company information and work rules.</p>
+        <nav class="sidebar-nav">
+          <div class="nav-section-title">Main Menu</div>
+          <a href="admin.html" class="nav-item">
+            <span class="icon">📊</span>
+            <span>Dashboard</span>
+          </a>
+          <a href="employees.html" class="nav-item">
+            <span class="icon">👥</span>
+            <span>Manage Employees</span>
+          </a>
+          <a href="leaves.html" class="nav-item">
+            <span class="icon">📅</span>
+            <span>Leave Requests</span>
+          </a>
+          <a href="payslip.html" class="nav-item">
+            <span class="icon">💰</span>
+            <span>Monthly Payslips</span>
+          </a>
+          <a href="settings.html" class="nav-item active">
+            <span class="icon">⚙️</span>
+            <span>Company Settings</span>
+          </a>
+        </nav>
 
-        <form id="settingsForm">
-          <div class="form-grid">
-            <div class="form-group">
-              <label for="settingsCompanyName">Company Name</label>
-              <input
-                id="settingsCompanyName"
-                name="companyName"
-                type="text"
-                placeholder="Enter company name"
-                required
-              >
-            </div>
-
-            <div class="form-group">
-              <label for="officeStartTime">Office Start Time</label>
-              <input
-                id="officeStartTime"
-                name="officeStartTime"
-                type="time"
-                required
-              >
-            </div>
-
-            <div class="form-group">
-              <label for="graceMinutes">Grace Period (minutes)</label>
-              <input
-                id="graceMinutes"
-                name="graceMinutes"
-                type="number"
-                min="0"
-                step="1"
-                required
-              >
-            </div>
-
-            <div class="form-group">
-              <label for="halfDayMinutes">Half-Day Threshold (minutes)</label>
-              <input
-                id="halfDayMinutes"
-                name="halfDayMinutes"
-                type="number"
-                min="1"
-                step="1"
-                required
-              >
-            </div>
-
-            <div class="form-group">
-              <label for="leaveQuota">Annual Leave Quota (days)</label>
-              <input
-                id="leaveQuota"
-                name="leaveQuota"
-                type="number"
-                min="0"
-                step="1"
-                required
-              >
+        <div class="sidebar-footer">
+          <div class="user-profile-summary">
+            <div class="user-avatar" id="adminAvatar">AD</div>
+            <div class="user-info-text">
+              <div class="user-name" id="adminUserName">Administrator</div>
+              <div class="user-role-badge">System Admin</div>
             </div>
           </div>
+        </div>
+      </aside>
 
-          <div class="form-group">
-            <label>Working Days</label>
-            <div class="working-days">
-              <label><input type="checkbox" name="workingDays" value="1"> Monday</label>
-              <label><input type="checkbox" name="workingDays" value="2"> Tuesday</label>
-              <label><input type="checkbox" name="workingDays" value="3"> Wednesday</label>
-              <label><input type="checkbox" name="workingDays" value="4"> Thursday</label>
-              <label><input type="checkbox" name="workingDays" value="5"> Friday</label>
-              <label><input type="checkbox" name="workingDays" value="6"> Saturday</label>
-              <label><input type="checkbox" name="workingDays" value="0"> Sunday</label>
-            </div>
+      <div class="main-wrapper">
+        <header class="topbar">
+          <div class="topbar-left">
+            <button type="button" class="mobile-menu-btn" id="mobileMenuBtn">
+              ☰
+            </button>
+            <h1 class="page-title">Company Configuration & Rules</h1>
           </div>
-
-          <p id="settingsError" role="alert" class="error-message"></p>
-          <p id="settingsMessage" role="status"></p>
-
-          <div class="form-actions">
-            <button class="btn btn-primary" type="submit">
-              Save Settings
+          <div class="topbar-right">
+            <button
+              type="button"
+              class="btn btn-outline btn-sm theme-toggle-btn"
+            >
+              <span class="icon">🌙</span>
+              <span class="theme-text">Dark Mode</span>
+            </button>
+            <button type="button" class="btn btn-outline btn-sm logout-btn">
+              🚪 Sign Out
             </button>
           </div>
-        </form>
-      </section>
+        </header>
 
-      <section class="card">
-        <h2>Work Rules Preview</h2>
-        <p class="muted">Preview updates as you change the settings.</p>
+        <main class="page-content">
+          <div
+            style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem"
+          >
+            <div>
+              <div class="card">
+                <div class="card-header">
+                  <div>
+                    <h3 class="card-title">
+                      General Company & Attendance Rules
+                    </h3>
+                    <p class="card-subtitle">
+                      Configure organization profile, working hours, and
+                      evaluation thresholds
+                    </p>
+                  </div>
+                </div>
 
-        <div class="form-grid">
-          <div class="form-group">
-            <span class="muted">Present From</span>
-            <h3 id="rulePresent">09:15</h3>
+                <div class="card-body">
+                  <form id="settingsForm">
+                    <div class="form-group">
+                      <label class="form-label" for="settingCompanyName"
+                        >Company Name <span class="required">*</span></label
+                      >
+                      <input
+                        type="text"
+                        id="settingCompanyName"
+                        class="form-control"
+                        required
+                      />
+                      <div class="form-text">
+                        Displayed on headers, payslips, and system
+                        correspondence.
+                      </div>
+                    </div>
+
+                    <div class="form-grid-2">
+                      <div class="form-group">
+                        <label class="form-label" for="settingStartTime"
+                          >Office Start Time
+                          <span class="required">*</span></label
+                        >
+                        <input
+                          type="time"
+                          id="settingStartTime"
+                          class="form-control"
+                          required
+                        />
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label" for="settingEndTime"
+                          >Office End Time
+                          <span class="required">*</span></label
+                        >
+                        <input
+                          type="time"
+                          id="settingEndTime"
+                          class="form-control"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div class="form-grid-2">
+                      <div class="form-group">
+                        <label class="form-label" for="settingGracePeriod"
+                          >Grace Period (Minutes)
+                          <span class="required">*</span></label
+                        >
+                        <input
+                          type="number"
+                          id="settingGracePeriod"
+                          class="form-control"
+                          min="0"
+                          max="120"
+                          required
+                        />
+                        <div class="form-text">
+                          Arrivals within Start Time + Grace Period are marked
+                          "Present".
+                        </div>
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label" for="settingHalfDayCutoff"
+                          >Half-Day Cutoff Time
+                          <span class="required">*</span></label
+                        >
+                        <input
+                          type="time"
+                          id="settingHalfDayCutoff"
+                          class="form-control"
+                          required
+                        />
+                        <div class="form-text">
+                          Arrivals after this cutoff are marked "Half Day".
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="form-grid-3">
+                      <div class="form-group">
+                        <label class="form-label" for="settingDefaultQuota"
+                          >Default Leave Quota
+                          <span class="required">*</span></label
+                        >
+                        <input
+                          type="number"
+                          id="settingDefaultQuota"
+                          class="form-control"
+                          min="1"
+                          max="100"
+                          required
+                        />
+                        <div class="form-text">
+                          Annual paid days for new staff.
+                        </div>
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label" for="settingWorkDays"
+                          >Monthly Work Days
+                          <span class="required">*</span></label
+                        >
+                        <input
+                          type="number"
+                          id="settingWorkDays"
+                          class="form-control"
+                          min="15"
+                          max="31"
+                          required
+                        />
+                        <div class="form-text">
+                          Divisor for daily rate math.
+                        </div>
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label" for="settingCurrency"
+                          >Currency Symbol
+                          <span class="required">*</span></label
+                        >
+                        <input
+                          type="text"
+                          id="settingCurrency"
+                          class="form-control"
+                          placeholder="$"
+                          required
+                        />
+                        <div class="form-text">e.g. $, €, £, ¥, ₹</div>
+                      </div>
+                    </div>
+
+                    <div style="margin-top: 1.5rem; text-align: right">
+                      <button
+                        type="submit"
+                        class="btn btn-primary btn-lg"
+                        id="saveSettingsBtn"
+                      >
+                        💾 Save Company Settings
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div class="card">
+                <div class="card-header">
+                  <h3 class="card-title">📖 Policy Documentation</h3>
+                </div>
+                <div
+                  class="card-body"
+                  style="
+                    font-size: 0.85rem;
+                    line-height: 1.6;
+                    color: var(--text-secondary);
+                  "
+                >
+                  <p><strong>Attendance Evaluation Rules:</strong></p>
+                  <ul
+                    style="
+                      padding-left: 1.25rem;
+                      margin-top: 0.5rem;
+                      margin-bottom: 1rem;
+                    "
+                  >
+                    <li>
+                      <strong>Present:</strong> Check-in is recorded on or
+                      before <code>Office Start + Grace Period</code> (e.g.
+                      09:15).
+                    </li>
+                    <li>
+                      <strong>Late:</strong> Check-in is after Grace Period but
+                      on or before <code>Half-Day Cutoff</code> (e.g. between
+                      09:16 and 12:00).
+                    </li>
+                    <li>
+                      <strong>Half Day:</strong> Check-in is after Half-Day
+                      Cutoff (e.g. 12:01+), or total shift worked is less than 4
+                      hours upon checkout.
+                    </li>
+                  </ul>
+
+                  <p><strong>Payroll Deduction Policy:</strong></p>
+                  <ul style="padding-left: 1.25rem; margin-top: 0.5rem">
+                    <li>
+                      <code>Daily Rate = Monthly Base Salary / Work Days</code>
+                    </li>
+                    <li>
+                      Half days incur exactly
+                      <code>0.5 × Daily Rate</code> deduction.
+                    </li>
+                    <li>
+                      Late arrivals do not incur automatic monetary fines unless
+                      configured.
+                    </li>
+                    <li>Paid leaves do not deduct from salary.</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div class="card" style="border-color: var(--danger-border)">
+                <div
+                  class="card-header"
+                  style="background-color: var(--danger-bg)"
+                >
+                  <h3 class="card-title" style="color: var(--danger-text)">
+                    ⚠️ Danger Zone
+                  </h3>
+                </div>
+                <div class="card-body">
+                  <p
+                    style="
+                      font-size: 0.85rem;
+                      color: var(--text-muted);
+                      margin-bottom: 1rem;
+                    "
+                  >
+                    Resetting removes all employees, attendance logs, leave
+                    records, and administrator accounts from browser storage.
+                    Allows you to re-experience first-run setup.
+                  </p>
+                  <button
+                    type="button"
+                    class="btn btn-danger"
+                    id="resetAllDataBtn"
+                    style="width: 100%"
+                  >
+                    🗑️ Reset All Application Data
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
+        </main>
+      </div>
+    </div>
 
-          <div class="form-group">
-            <span class="muted">Late After</span>
-            <h3 id="ruleLate">11:00</h3>
-          </div>
+    <script src="../js/storage.js"></script>
+    <script src="../js/auth.js"></script>
+    <script src="../js/settings.js"></script>
+    <script src="../js/helper.js"></script>
 
-          <div class="form-group">
-            <span class="muted">Half-Day Threshold</span>
-            <h3 id="ruleHalf">11:00</h3>
-          </div>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        if (!AuthService.requireAuth("admin")) return;
 
-          <div class="form-group">
-            <span class="muted">Working Days Selected</span>
-            <h3 id="ruleDays">5</h3>
-          </div>
-        </div>
-      </section>
+        const session = AuthService.getSession();
+        const company = StorageService.getCompany() || {};
 
-      <section class="card">
-        <h2>Appearance</h2>
-        <p class="muted">Change the app's display theme.</p>
-        <button
-          id="themeToggleSettings"
-          class="btn btn-secondary"
-          type="button"
-        >
-          Toggle Light / Dark Theme
-        </button>
-      </section>
-    </main>
-  </div>
-</body>
+        if (session) {
+          document.getElementById("adminUserName").textContent =
+            session.fullName;
+          const initials = session.fullName
+            .split(" ")
+            .map((n) => n[0])
+            .join("")
+            .substring(0, 2)
+            .toUpperCase();
+          document.getElementById("adminAvatar").textContent = initials || "AD";
+        }
+
+        const companyDisplays = document.querySelectorAll(
+          ".company-name-display",
+        );
+        companyDisplays.forEach(
+          (el) => (el.textContent = company.companyName || "Acme Corp"),
+        );
+
+        SettingsModule.init();
+
+        const mobileBtn = document.getElementById("mobileMenuBtn");
+        const sidebarCloseBtn = document.getElementById("sidebarCloseBtn");
+        const sidebar = document.getElementById("appSidebar");
+
+        mobileBtn?.addEventListener("click", () =>
+          sidebar.classList.add("open"),
+        );
+        sidebarCloseBtn?.addEventListener("click", () =>
+          sidebar.classList.remove("open"),
+        );
+      });
+    </script>
+  </body>
 </html>

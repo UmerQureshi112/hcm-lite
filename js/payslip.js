@@ -1,260 +1,349 @@
+/**
+ * HCM Lite - Monthly Payslip Module (js/payslip.js)
+ * Generates transparent, verifiable monthly salary slips from actual attendance & leave records.
+ * Provides documented salary deduction math and print/PDF support.
+ */
 
-document.addEventListener("DOMContentLoaded", function () {
-  const $ = (id) => document.getElementById(id);
+const PayslipModule = {
+  currentEmployeeId: null,
+  selectedYear: new Date().getFullYear(),
+  selectedMonth: new Date().getMonth() + 1,
 
-  const content = $("payslipContent");
-  const employeeSelect = $("payslipEmployeeSelect");
-  const monthInput = $("payslipMonthInput");
-  const emptyMessage = $("payslipEmpty");
-  const message = $("payslipMessage");
-  const printButton = $("printPayslipBtn");
-  const employeeField = $("employeeField");
-  const controlsHint = $("controlsHint");
+  init() {
+    const session = AuthService.getSession();
+    if (!session) return;
 
-  if (!content || !employeeSelect || !monthInput) {
-    console.error("Payslip setup error: Check payslip.html IDs.");
-    return;
-  }
+    this.setupControls(session);
+    this.bindEvents();
+    this.generatePayslip();
+  },
 
-  if (typeof getEmployees !== "function" ||
-      typeof calculatePayslip !== "function") {
-    if (message) message.textContent = "Salary data could not be loaded.";
-    return;
-  }
+  setupControls(session) {
+    const empSelect = document.getElementById("payslipEmployeeSelect");
+    const monthSelect = document.getElementById("payslipMonthSelect");
+    const yearSelect = document.getElementById("payslipYearSelect");
+    const empSelectorGroup = document.getElementById(
+      "payslipEmployeeSelectorGroup",
+    );
 
-  const currentUser =
-    typeof getCurrentUser === "function" ? getCurrentUser() : null;
-
-  const isEmployee = currentUser &&
-    String(currentUser.role).toLowerCase() === "employee";
-
-  function employeeId(employee) {
-    return String(employee.id ?? employee.employeeId ?? "");
-  }
-
-  function employeeName(employee) {
-    return employee.name || employee.fullName ||
-      employee.employeeName ||
-      [employee.firstName, employee.lastName].filter(Boolean).join(" ") ||
-      "Employee";
-  }
-
-  function money(value) {
-    const amount = Number(value);
-    return "Rs. " + (Number.isFinite(amount) ? amount : 0)
-      .toLocaleString("en-PK", { maximumFractionDigits: 2 });
-  }
-
-  function setText(id, value) {
-    const element = $(id);
-    if (element) element.textContent = value ?? "—";
-  }
-
-  function showEmpty(text) {
-    content.hidden = true;
-    if (emptyMessage) {
-      emptyMessage.hidden = false;
-      emptyMessage.textContent = text;
-    }
-  }
-
-  function showMessage(text) {
-    if (message) message.textContent = text || "";
-  }
-
-  function loadEmployees() {
-    const allEmployees = getEmployees() || [];
-
-    const availableEmployees = isEmployee
-      ? allEmployees.filter((employee) =>
-          (employeeId(employee) === String(currentUser.id) ||
-           employee.email?.toLowerCase() === currentUser.email?.toLowerCase()) &&
-          employee.status !== "Inactive"
-        )
-      : allEmployees;
-
-    employeeSelect.innerHTML = '<option value="">Select employee</option>';
-
-    availableEmployees.forEach((employee) => {
-      const id = employeeId(employee);
-      if (!id) return;
-
-      const option = document.createElement("option");
-      option.value = id;
-      option.textContent = employeeName(employee);
-      employeeSelect.appendChild(option);
-    });
-
-    if (isEmployee) {
-      employeeSelect.disabled = true;
-      if (employeeField) employeeField.hidden = true;
-
-      if (availableEmployees.length === 1) {
-        employeeSelect.value = employeeId(availableEmployees[0]);
+    const currentYear = new Date().getFullYear();
+    if (yearSelect) {
+      yearSelect.innerHTML = "";
+      for (let y = currentYear - 2; y <= currentYear + 1; y++) {
+        const opt = document.createElement("option");
+        opt.value = y;
+        opt.textContent = y;
+        if (y === currentYear) opt.selected = true;
+        yearSelect.appendChild(opt);
       }
     }
 
-    if (!availableEmployees.length) {
-      showEmpty(isEmployee
-        ? "Your employee profile was not found or is inactive."
-        : "No employees found. Add an employee first.");
+    if (monthSelect) {
+      monthSelect.value = String(new Date().getMonth() + 1);
     }
 
-    return availableEmployees;
-  }
-
-  function renderPayslip() {
-    showMessage("");
-
-    const month = monthInput.value;
-    const selectedId = employeeSelect.value;
-
-    if (!selectedId) {
-      showEmpty("Please select an employee.");
-      return;
-    }
-
-    if (!month) {
-      showEmpty("Please select a salary month.");
-      return;
-    }
-
-    const employee = (getEmployees() || []).find(
-      (item) => employeeId(item) === selectedId
-    );
-
-    if (!employee || employee.status === "Inactive") {
-      showEmpty("Employee not found or inactive.");
-      return;
-    }
-
-    // Security guard: employees may view only their own payslip.
-    if (isEmployee &&
-        employee.email?.toLowerCase() !== currentUser.email?.toLowerCase() &&
-        employeeId(employee) !== String(currentUser.id)) {
-      showEmpty("You can only view your own payslip.");
-      return;
-    }
-
-    let result;
-
-    try {
-      result = calculatePayslip(employee, month);
-    } catch (error) {
-      console.error("Payslip calculation failed:", error);
-      showEmpty("Unable to calculate payslip. Check attendance.js.");
-      return;
-    }
-
-    if (!result || typeof result !== "object") {
-      showEmpty("No payslip data is available.");
-      return;
-    }
-
-    // calculatePayslip returns attendance summary fields directly.
-    const summary = result.summary || result;
-    const monthlySalary = Number(
-      result.monthlySalary ?? employee.salary ??
-      employee.monthlySalary ?? employee.basicSalary ?? 0
-    );
-    const absentDeduction = Number(result.absentDeduction ?? 0);
-    const halfDayDeduction = Number(result.halfDayDeduction ?? 0);
-    const totalDeduction = Number(
-      result.totalDeduction ??
-      result.salaryDeduction ??
-      absentDeduction + halfDayDeduction
-    );
-    const netSalary = Number(
-      result.netSalary ?? Math.max(monthlySalary - totalDeduction, 0)
-    );
-
-    const monthDate = new Date(month + "-01T00:00:00");
-    const monthLabel = Number.isNaN(monthDate.getTime())
-      ? month
-      : monthDate.toLocaleDateString("en-PK", {
-          month: "long",
-          year: "numeric"
-        });
-
-    setText("payslipCompany",
-      typeof getCompanyName === "function" ? getCompanyName() : "HCM Lite");
-    setText("payslipMonth", monthLabel);
-    setText("payslipEmployee", employeeName(employee));
-    setText("payslipDepartment",
-      employee.department || employee.designation || "—");
-    setText("payslipEmail", employee.email || "—");
-
-    const joined = employee.joiningDate || employee.joinDate ||
-      employee.dateJoined || "—";
-    setText("payslipJoined", joined);
-
-    const values = {
-      workingDays: ["workingDays", "monthWorkingDays", "totalWorkingDays"],
-      countedDays: ["countedDays", "recordedDays", "totalRecords"],
-      presentDays: ["presentDays", "present"],
-      lateDays: ["lateDays", "late"],
-      halfDays: ["halfDays", "halfDay"],
-      leaveDays: ["leaveDays", "approvedLeaveDays"],
-      absentDays: ["absentDays", "absent"]
-    };
-
-    Object.entries(values).forEach(([id, keys]) => {
-      let value = 0;
-      for (const key of keys) {
-        if (summary[key] != null) {
-          value = summary[key];
-          break;
+    if (session.role === "employee") {
+      this.currentEmployeeId = session.employeeId;
+      if (empSelectorGroup) {
+        empSelectorGroup.style.display = "none";
+      }
+    } else {
+      const employees = StorageService.getEmployees();
+      if (empSelect) {
+        empSelect.innerHTML = "";
+        if (employees.length === 0) {
+          empSelect.innerHTML = '<option value="">No employees found</option>';
+        } else {
+          employees.forEach((emp) => {
+            const opt = document.createElement("option");
+            opt.value = emp.employeeId;
+            opt.textContent = `${emp.fullName} (${emp.employeeId}) - ${emp.department}`;
+            empSelect.appendChild(opt);
+          });
+          this.currentEmployeeId = employees[0].employeeId;
         }
       }
-      setText(id, Number(value) || 0);
+    }
+  },
+
+  bindEvents() {
+    const empSelect = document.getElementById("payslipEmployeeSelect");
+    const monthSelect = document.getElementById("payslipMonthSelect");
+    const yearSelect = document.getElementById("payslipYearSelect");
+    const printBtn = document.getElementById("printPayslipBtn");
+
+    empSelect?.addEventListener("change", (e) => {
+      this.currentEmployeeId = e.target.value;
+      this.generatePayslip();
     });
 
-    setText("monthlySalary", money(monthlySalary));
-    setText("dailySalary", money(result.dailySalary ?? 0));
-    setText("absentDeduction", money(absentDeduction));
-    setText("halfDayDeduction", money(halfDayDeduction));
-    setText("salaryDeduction", money(totalDeduction));
-    setText("netSalary", money(netSalary));
+    monthSelect?.addEventListener("change", (e) => {
+      this.selectedMonth = parseInt(e.target.value, 10);
+      this.generatePayslip();
+    });
 
-    content.hidden = false;
-    if (emptyMessage) emptyMessage.hidden = true;
+    yearSelect?.addEventListener("change", (e) => {
+      this.selectedYear = parseInt(e.target.value, 10);
+      this.generatePayslip();
+    });
 
-    if (controlsHint) {
-      controlsHint.textContent =
-        "Payslip generated for " + employeeName(employee) +
-        " — " + monthLabel + ".";
-    }
-  }
-
-  const now = new Date();
-  monthInput.value = now.getFullYear() + "-" +
-    String(now.getMonth() + 1).padStart(2, "0");
-
-  loadEmployees();
-
-  employeeSelect.addEventListener("change", renderPayslip);
-  monthInput.addEventListener("change", renderPayslip);
-
-  if (printButton) {
-    printButton.addEventListener("click", function () {
-      if (content.hidden) {
-        showMessage("Generate a payslip before printing.");
-        return;
-      }
+    printBtn?.addEventListener("click", () => {
       window.print();
     });
-  }
+  },
 
-  window.addEventListener("storage", function () {
-    const previous = employeeSelect.value;
-    loadEmployees();
+  generatePayslip() {
+    const container = document.getElementById("payslipDocumentContainer");
+    const emptyState = document.getElementById("payslipEmptyState");
+    if (!container) return;
 
-    if ([...employeeSelect.options].some((option) => option.value === previous)) {
-      employeeSelect.value = previous;
+    if (!this.currentEmployeeId) {
+      container.style.display = "none";
+      if (emptyState) emptyState.style.display = "block";
+      return;
     }
 
-    renderPayslip();
-  });
+    const employee = StorageService.getEmployeeByEmpId(this.currentEmployeeId);
+    if (!employee) {
+      container.style.display = "none";
+      if (emptyState) emptyState.style.display = "block";
+      return;
+    }
 
-  renderPayslip();
-});
+    container.style.display = "block";
+    if (emptyState) emptyState.style.display = "none";
+
+    const company = StorageService.getCompany() || {};
+    const currency = company.currency || "$";
+    const standardWorkDays = company.workDaysPerMonth || 22;
+    const baseSalary = parseFloat(employee.monthlySalary) || 0;
+
+    const targetMonthStr = `${this.selectedYear}-${String(this.selectedMonth).padStart(2, "0")}`;
+    const allAttendance = StorageService.getEmployeeAttendance(
+      employee.employeeId,
+    );
+    const monthAttendance = allAttendance.filter(
+      (a) => a.date && a.date.startsWith(targetMonthStr),
+    );
+
+    const presentDays = monthAttendance.filter(
+      (a) => a.status === "Present",
+    ).length;
+    const lateDays = monthAttendance.filter((a) => a.status === "Late").length;
+    const halfDays = monthAttendance.filter(
+      (a) => a.status === "Half Day" || a.status === "HalfDay",
+    ).length;
+
+    const allLeaves = StorageService.getEmployeeLeaves(employee.employeeId);
+    const approvedLeaves = allLeaves.filter(
+      (l) =>
+        l.status === "Approved" &&
+        l.startDate &&
+        l.startDate.startsWith(targetMonthStr),
+    );
+    const paidLeaveDays = approvedLeaves
+      .filter((l) => l.leaveType !== "Unpaid")
+      .reduce((sum, l) => sum + (parseInt(l.daysCount, 10) || 0), 0);
+    const unpaidLeaveDays = approvedLeaves
+      .filter((l) => l.leaveType === "Unpaid")
+      .reduce((sum, l) => sum + (parseInt(l.daysCount, 10) || 0), 0);
+
+    const dailyRate = standardWorkDays > 0 ? baseSalary / standardWorkDays : 0;
+    const halfDayDeduction = halfDays * (dailyRate * 0.5);
+    const unpaidLeaveDeduction = unpaidLeaveDays * dailyRate;
+    const totalDeductions = halfDayDeduction + unpaidLeaveDeduction;
+    const netSalary = Math.max(0, baseSalary - totalDeductions);
+
+    const monthNames = [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ];
+    const monthName = monthNames[this.selectedMonth - 1];
+
+    container.innerHTML = `
+      <div class="payslip-container">
+        <!-- Letterhead Header -->
+        <div class="payslip-header">
+          <div>
+            <div class="payslip-company-title">${this.escapeHtml(company.companyName || "HCM Lite")}</div>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">
+              Official Monthly Salary Statement
+            </p>
+          </div>
+          <div style="text-align: right;">
+            <div class="payslip-badge">PAYSLIP</div>
+            <div style="font-weight: 700; font-size: 1.15rem; color: var(--text-primary); margin-top: 0.25rem;">
+              ${monthName} ${this.selectedYear}
+            </div>
+          </div>
+        </div>
+
+        <!-- Employee & Period Metadata -->
+        <div class="payslip-meta-grid">
+          <div class="payslip-meta-item">
+            <div class="label">Employee Name</div>
+            <div class="value">${this.escapeHtml(employee.fullName)}</div>
+          </div>
+          <div class="payslip-meta-item">
+            <div class="label">Employee ID</div>
+            <div class="value font-mono">${this.escapeHtml(employee.employeeId)}</div>
+          </div>
+          <div class="payslip-meta-item">
+            <div class="label">Department</div>
+            <div class="value">${this.escapeHtml(employee.department)}</div>
+          </div>
+          <div class="payslip-meta-item">
+            <div class="label">Job Title</div>
+            <div class="value">${this.escapeHtml(employee.jobTitle)}</div>
+          </div>
+          <div class="payslip-meta-item">
+            <div class="label">Joining Date</div>
+            <div class="value">${employee.joiningDate || "-"}</div>
+          </div>
+          <div class="payslip-meta-item">
+            <div class="label">Standard Work Days</div>
+            <div class="value">${standardWorkDays} Days (Daily Rate: ${currency}${dailyRate.toFixed(2)})</div>
+          </div>
+        </div>
+
+        <!-- Attendance & Activity Summary -->
+        <div class="payslip-section-title">Attendance & Activity Summary</div>
+        <table class="payslip-table">
+          <thead>
+            <tr>
+              <th>Metric</th>
+              <th>Recorded Count</th>
+              <th>Impact on Payroll</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>On-Time Days (Present)</td>
+              <td><strong>${presentDays}</strong> day(s)</td>
+              <td>Full Day Pay</td>
+            </tr>
+            <tr>
+              <td>Late Arrivals</td>
+              <td><strong>${lateDays}</strong> day(s)</td>
+              <td>Full Day Pay (No penalty deducted)</td>
+            </tr>
+            <tr>
+              <td>Half-Days</td>
+              <td><strong>${halfDays}</strong> day(s)</td>
+              <td>0.5 Day deduction per instance (-${currency}${halfDayDeduction.toFixed(2)})</td>
+            </tr>
+            <tr>
+              <td>Approved Paid Leaves</td>
+              <td><strong>${paidLeaveDays}</strong> day(s)</td>
+              <td>Fully Covered by Quota ($0 deduction)</td>
+            </tr>
+            ${
+              unpaidLeaveDays > 0
+                ? `
+            <tr>
+              <td>Approved Unpaid Leaves</td>
+              <td><strong>${unpaidLeaveDays}</strong> day(s)</td>
+              <td>1.0 Day deduction per instance (-${currency}${unpaidLeaveDeduction.toFixed(2)})</td>
+            </tr>
+            `
+                : ""
+            }
+          </tbody>
+        </table>
+
+        <!-- Earnings & Deductions Tables -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem;">
+          <div>
+            <div class="payslip-section-title">Earnings</div>
+            <table class="payslip-table">
+              <thead>
+                <tr>
+                  <th>Description</th>
+                  <th class="text-right">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Monthly Base Salary</td>
+                  <td class="text-right font-mono">${currency}${baseSalary.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                </tr>
+                <tr>
+                  <td><strong>Total Earnings</strong></td>
+                  <td class="text-right font-mono"><strong>${currency}${baseSalary.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div>
+            <div class="payslip-section-title">Deductions</div>
+            <table class="payslip-table">
+              <thead>
+                <tr>
+                  <th>Description</th>
+                  <th class="text-right">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Half-Day Deductions (${halfDays} × 0.5 day)</td>
+                  <td class="text-right font-mono">${currency}${halfDayDeduction.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                </tr>
+                <tr>
+                  <td>Unpaid Leave Deductions (${unpaidLeaveDays} day(s))</td>
+                  <td class="text-right font-mono">${currency}${unpaidLeaveDeduction.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                </tr>
+                <tr>
+                  <td><strong>Total Deductions</strong></td>
+                  <td class="text-right font-mono" style="color: #ef4444;"><strong>${currency}${totalDeductions.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Net Salary Box -->
+        <div class="payslip-net-box">
+          <div>
+            <div class="payslip-net-label">NET TAKE-HOME PAY</div>
+            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.2rem;">
+              Earnings minus documented deductions for ${monthName} ${this.selectedYear}
+            </div>
+          </div>
+          <div class="payslip-net-amount font-mono">
+            ${currency}${netSalary.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </div>
+        </div>
+
+        <!-- Documentation & Policy Note -->
+        <div class="payslip-formula-note">
+          <strong>Payroll Policy & Formula Documentation:</strong>
+          Daily Rate = Monthly Base Salary (${currency}${baseSalary.toFixed(2)}) ÷ Standard Work Days (${standardWorkDays}) = ${currency}${dailyRate.toFixed(2)}/day.<br>
+          Half-day occurrences deduct 50% of the daily rate. Late arrivals are noted for punctuality and do not incur automatic wage deduction. Net Pay = Base Salary - Deductions.
+        </div>
+      </div>
+    `;
+  },
+
+  escapeHtml(str) {
+    if (!str) return "";
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  },
+};
+
+window.PayslipModule = PayslipModule;

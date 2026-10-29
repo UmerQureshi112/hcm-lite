@@ -1,358 +1,240 @@
-(function () {
-  "use strict";
+/**
+ * HCM Lite - Authentication & Authorization Module (js/auth.js)
+ * Handles first-run setup, credentials validation, session persistence, role protection, and theme toggling.
+ */
 
-  const script = document.currentScript;
-  const requiredRole = script?.dataset?.role || "";
-
-  const scriptURL = script?.src
-    ? new URL(script.src, window.location.href)
-    : new URL("../js/auth.js", window.location.href);
-
-  const ROOT_URL = new URL("../", scriptURL).href;
-  const LOGIN_PAGE = new URL("index.html", ROOT_URL).href;
-  const ADMIN_PAGE = new URL("pages/admin.html", ROOT_URL).href;
-  const EMPLOYEE_PAGE = new URL("pages/employee.html", ROOT_URL).href;
-
-  function getStoredData(key, fallback = null) {
-    try {
-      const raw = localStorage.getItem(key);
-      return raw ? JSON.parse(raw) : fallback;
-    } catch (error) {
-      console.error(`Unable to read ${key}:`, error);
-      return fallback;
-    }
+// Universal Toast Notification System
+function showToast(message, type = 'info') {
+  let container = document.getElementById('toastContainer');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toastContainer';
+    container.className = 'toast-container';
+    document.body.appendChild(container);
   }
 
-  function saveStoredData(key, value) {
-    try {
-      localStorage.setItem(key, JSON.stringify(value));
-      return true;
-    } catch (error) {
-      console.error(`Unable to save ${key}:`, error);
-      return false;
-    }
-  }
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : type === 'warning' ? '⚠️' : 'ℹ️';
 
-  function getAdmin() {
-    return getStoredData("hcm_admin");
-  }
+  const cleanMessage = String(message)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 
-  function getEmployees() {
-    const employees = getStoredData("hcm_employees", []);
-    return Array.isArray(employees) ? employees : [];
-  }
+  toast.innerHTML = `
+    <div class="toast-icon">${icon}</div>
+    <div class="toast-content">
+      <div class="toast-title">${type.toUpperCase()}</div>
+      <div class="toast-message">${cleanMessage}</div>
+    </div>
+  `;
 
-  function getCurrentUser() {
-    return getStoredData("hcm_currentUser");
-  }
+  container.appendChild(toast);
 
-  function clearCurrentUser() {
-    localStorage.removeItem("hcm_currentUser");
-  }
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateX(40px)';
+    setTimeout(() => toast.remove(), 250);
+  }, 3500);
+}
+window.showToast = showToast;
 
-  function showError(message, targetId) {
-    const element =
-      document.getElementById(targetId) ||
-      document.getElementById("formError");
+const AuthService = {
+  needsFirstRun() {
+    return !StorageService.isSetupCompleted();
+  },
 
-    if (element) {
-      element.textContent = message;
-      element.style.display = "block";
-    } else {
-      alert(message);
-    }
-  }
+  getSession() {
+    return StorageService.getSession();
+  },
 
-  function hideError(targetId) {
-    const element = document.getElementById(targetId);
-    if (element) {
-      element.textContent = "";
-      element.style.display = "none";
-    }
-  }
+  isLoggedIn() {
+    const session = this.getSession();
+    return !!(session && session.userId && session.role);
+  },
 
-  function getValidUser() {
-    const user = getCurrentUser();
+  isAdmin() {
+    const session = this.getSession();
+    return session && session.role === 'admin';
+  },
 
-    if (!user || !user.id || !user.role) {
-      return null;
-    }
+  isEmployee() {
+    const session = this.getSession();
+    return session && session.role === 'employee';
+  },
 
-    if (user.role === "admin") {
-      const admin = getAdmin();
+  setupFirstRun(data) {
+    const { companyName, adminName, adminEmail, adminPassword, confirmPassword } = data;
 
-      if (
-        !admin ||
-        admin.email?.toLowerCase() !== user.email?.toLowerCase()
-      ) {
-        clearCurrentUser();
-        return null;
-      }
-
-      return user;
+    if (!companyName || !adminName || !adminEmail || !adminPassword) {
+      return { success: false, message: 'All fields are required.' };
     }
 
-    if (user.role === "employee") {
-      const employee = getEmployees().find(
-        (item) =>
-          String(item.id) === String(user.id) &&
-          item.email?.toLowerCase() === user.email?.toLowerCase()
-      );
-
-      if (!employee || employee.status === "Inactive") {
-        clearCurrentUser();
-        return null;
-      }
-
-      return {
-        ...user,
-        name: employee.name || employee.fullName || user.name,
-        email: employee.email,
-        role: "employee"
-      };
+    if (adminPassword !== confirmPassword) {
+      return { success: false, message: 'Passwords do not match.' };
     }
 
-    clearCurrentUser();
-    return null;
-  }
-
-  function startSession(user, role) {
-    const session = {
-      id: user.id,
-      name: user.name || user.fullName || "User",
-      email: user.email,
-      role
-    };
-
-    if (!saveStoredData("hcm_currentUser", session)) {
-      alert("Unable to save your session. Check browser storage.");
-      return;
+    if (adminPassword.length < 4) {
+      return { success: false, message: 'Password must be at least 4 characters long.' };
     }
 
-    window.location.href =
-      role === "admin" ? ADMIN_PAGE : EMPLOYEE_PAGE;
-  }
-
-  function setupLoginPage() {
-    const loginForm = document.getElementById("loginForm");
-    const setupForm = document.getElementById("setupForm");
-    const loginSection = document.getElementById("loginSection");
-    const setupSection = document.getElementById("setupSection");
-
-    const admin = getAdmin();
-
-    if (admin) {
-      if (loginSection) loginSection.hidden = false;
-      if (setupSection) setupSection.hidden = true;
-    } else {
-      if (setupSection) setupSection.hidden = false;
-      if (loginSection) loginSection.hidden = true;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(adminEmail.trim())) {
+      return { success: false, message: 'Please enter a valid email address.' };
     }
 
-    const existingUser = getValidUser();
-
-    if (existingUser) {
-      window.location.replace(
-        existingUser.role === "admin" ? ADMIN_PAGE : EMPLOYEE_PAGE
-      );
-      return;
-    }
-
-    if (setupForm) {
-      setupForm.addEventListener("submit", function (event) {
-        event.preventDefault();
-        hideError("setupError");
-
-        if (getAdmin()) {
-          showError(
-            "Company setup is already complete. Please sign in.",
-            "setupError"
-          );
-          if (setupSection) setupSection.hidden = true;
-          if (loginSection) loginSection.hidden = false;
-          return;
-        }
-
-        const companyName =
-          document.getElementById("companyName")?.value.trim() || "";
-        const name =
-          document.getElementById("adminName")?.value.trim() || "";
-        const email =
-          document.getElementById("adminEmail")?.value.trim().toLowerCase() || "";
-        const password =
-          document.getElementById("adminPassword")?.value || "";
-
-        if (!companyName || !name || !email || !password) {
-          showError("Please complete all required fields.", "setupError");
-          return;
-        }
-
-        if (password.length < 6) {
-          showError(
-            "Password must contain at least 6 characters.",
-            "setupError"
-          );
-          return;
-        }
-
-        const newAdmin = {
-          id: "admin",
-          companyName,
-          name,
-          email,
-          password,
-          role: "admin"
-        };
-
-        if (!saveStoredData("hcm_admin", newAdmin)) {
-          showError(
-            "Unable to save your account. Check browser storage.",
-            "setupError"
-          );
-          return;
-        }
-
-        alert("Company and administrator account created. Please sign in.");
-
-        if (setupSection) setupSection.hidden = true;
-        if (loginSection) loginSection.hidden = false;
-        setupForm.reset();
-      });
-    }
-
-    if (loginForm) {
-      loginForm.addEventListener("submit", function (event) {
-        event.preventDefault();
-        hideError("loginError");
-
-        const email =
-          document.getElementById("email")?.value.trim().toLowerCase() || "";
-        const password =
-          document.getElementById("password")?.value || "";
-
-        if (!email || !password) {
-          showError("Please enter your email and password.", "loginError");
-          return;
-        }
-
-        const savedAdmin = getAdmin();
-
-        if (
-          savedAdmin &&
-          savedAdmin.email?.toLowerCase() === email &&
-          savedAdmin.password === password
-        ) {
-          startSession(
-            {
-              id: savedAdmin.id || "admin",
-              name: savedAdmin.name || "Admin",
-              email: savedAdmin.email
-            },
-            "admin"
-          );
-          return;
-        }
-
-        const employee = getEmployees().find(
-          (item) =>
-            item.email?.toLowerCase() === email &&
-            item.password === password &&
-            item.status !== "Inactive"
-        );
-
-        if (employee) {
-          startSession(
-            {
-              id: employee.id,
-              name: employee.name || employee.fullName || "Employee",
-              email: employee.email
-            },
-            "employee"
-          );
-          return;
-        }
-
-        showError(
-          "Invalid email or password, or your account is inactive.",
-          "loginError"
-        );
-      });
-    }
-  }
-
-  function protectPage() {
-    const user = getValidUser();
-
-    if (!user) {
-      window.location.replace(LOGIN_PAGE);
-      return;
-    }
-
-    if (requiredRole && requiredRole !== "any" && user.role !== requiredRole) {
-      window.location.replace(
-        user.role === "admin" ? ADMIN_PAGE : EMPLOYEE_PAGE
-      );
-      return;
-    }
-
-    fillUserInfo(user);
-    setupLogoutButtons();
-  }
-
-  function fillUserInfo(user) {
-    const name = user.name || user.fullName || "User";
-
-    [
-      "adminName",
-      "employeeName",
-      "welcomeName",
-      "userName",
-      "profileName"
-    ].forEach((id) => {
-      const element = document.getElementById(id);
-      if (element) element.textContent = name;
+    StorageService.saveCompany({
+      companyName: companyName.trim(),
+      setupCompleted: true,
+      setupDate: new Date().toISOString()
     });
 
-    const emailElement = document.getElementById("profileEmail");
-    if (emailElement) emailElement.textContent = user.email || "";
+    const adminUser = StorageService.addUser({
+      fullName: adminName.trim(),
+      email: adminEmail.trim(),
+      password: adminPassword,
+      role: 'admin',
+      employeeId: null
+    });
 
-    const roleElement = document.getElementById("userRole");
-    if (roleElement) {
-      roleElement.textContent =
-        user.role === "admin" ? "Administrator" : "Employee";
-    }
-  }
+    const session = {
+      userId: adminUser.id,
+      fullName: adminUser.fullName,
+      email: adminUser.email,
+      role: adminUser.role,
+      employeeId: null,
+      loginTime: new Date().toISOString()
+    };
+    StorageService.setSession(session);
 
-  function setupLogoutButtons() {
-    document
-      .querySelectorAll("#logoutBtn, #logoutButton, [data-logout]")
-      .forEach((button) => {
-        button.addEventListener("click", function (event) {
-          event.preventDefault();
-          clearCurrentUser();
-          window.location.replace(LOGIN_PAGE);
-        });
-      });
-  }
+    return { success: true, user: adminUser };
+  },
 
-  function initializeAuth() {
-    const path = window.location.pathname.toLowerCase();
-
-    if (
-      path.endsWith("/index.html") ||
-      path.endsWith("index.html") ||
-      path.endsWith("/")
-    ) {
-      setupLoginPage();
-      return;
+  login(email, password) {
+    if (!email || !password) {
+      return { success: false, message: 'Please enter both email and password.' };
     }
 
-    protectPage();
-  }
+    const cleanEmail = email.trim().toLowerCase();
+    const user = StorageService.getUserByEmail(cleanEmail);
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initializeAuth);
-  } else {
-    initializeAuth();
+    if (!user) {
+      return { success: false, message: 'No account found with this email address.' };
+    }
+
+    if (user.password !== password) {
+      return { success: false, message: 'Incorrect password. Please try again.' };
+    }
+
+    const session = {
+      userId: user.id,
+      fullName: user.fullName,
+      email: user.email,
+      role: user.role,
+      employeeId: user.employeeId || null,
+      loginTime: new Date().toISOString()
+    };
+    StorageService.setSession(session);
+
+    return { success: true, user };
+  },
+
+  logout() {
+    StorageService.clearSession();
+    const isInPagesDir = window.location.pathname.includes('/pages/');
+    window.location.href = isInPagesDir ? '../index.html' : 'index.html';
+  },
+
+  requireAuth(requiredRole = 'any') {
+    const isInPagesDir = window.location.pathname.includes('/pages/');
+    const loginPath = isInPagesDir ? '../index.html' : 'index.html';
+    const adminDashboard = isInPagesDir ? 'admin.html' : 'pages/admin.html';
+    const employeeDashboard = isInPagesDir ? 'employee.html' : 'pages/employee.html';
+
+    if (this.needsFirstRun()) {
+      if (isInPagesDir) {
+        window.location.href = loginPath;
+        return false;
+      }
+      return true;
+    }
+
+    const session = this.getSession();
+
+    if (!session || !session.userId) {
+      if (isInPagesDir) {
+        window.location.href = loginPath;
+        return false;
+      }
+      return true;
+    }
+
+    if (requiredRole === 'admin' && session.role !== 'admin') {
+      window.location.href = employeeDashboard;
+      return false;
+    }
+
+    if (requiredRole === 'employee' && session.role !== 'employee') {
+      window.location.href = adminDashboard;
+      return false;
+    }
+
+    return true;
+  },
+
+  initTheme() {
+    const currentTheme = StorageService.getTheme();
+    if (currentTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+      document.body && document.body.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      document.body && document.body.classList.remove('dark');
+    }
+    this.updateThemeToggleIcons(currentTheme);
+  },
+
+  toggleTheme() {
+    const currentTheme = StorageService.getTheme();
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    StorageService.setTheme(newTheme);
+    this.initTheme();
+    return newTheme;
+  },
+
+  updateThemeToggleIcons(theme) {
+    const buttons = document.querySelectorAll('.theme-toggle-btn');
+    buttons.forEach(btn => {
+      if (theme === 'dark') {
+        btn.innerHTML = '<span class="icon">☀️</span> <span class="theme-text">Light Mode</span>';
+        btn.setAttribute('aria-label', 'Switch to light mode');
+      } else {
+        btn.innerHTML = '<span class="icon">🌙</span> <span class="theme-text">Dark Mode</span>';
+        btn.setAttribute('aria-label', 'Switch to dark mode');
+      }
+    });
   }
-})();
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+  AuthService.initTheme();
+
+  document.querySelectorAll('.theme-toggle-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      AuthService.toggleTheme();
+    });
+  });
+
+  document.querySelectorAll('.logout-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (confirm('Are you sure you want to log out?')) {
+        AuthService.logout();
+      }
+    });
+  });
+});
+
+window.AuthService = AuthService;

@@ -1,674 +1,327 @@
+/**
+ * HCM Lite - Leave Management Module (js/leave.js)
+ * Implements leave applications, overlap detection, quota deduction on approval,
+ * decision commenting, and balance recalculation.
+ */
 
-/* =========================================================
-   HCM Lite - Leave Management
-   Works with employee.html, leaves.html and admin.html
-   ========================================================= */
+const LeaveModule = {
+  currentDecisionLeaveId: null,
 
-const LEAVE_TYPES = {
-  casual: "Casual Leave",
-  sick: "Sick Leave",
-  annual: "Annual Leave",
-};
+  calculateDays(startDateStr, endDateStr) {
+    if (!startDateStr || !endDateStr) return 0;
+    const start = new Date(startDateStr);
+    const end = new Date(endDateStr);
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) return 0;
 
-const LEAVE_BADGES = {
-  Pending: "badge-warning",
-  Approved: "badge-success",
-  Rejected: "badge-danger",
-};
+    const diffTime = end.getTime() - start.getTime();
+    if (diffTime < 0) return 0;
 
-function formatLeaveType(type) {
-  return LEAVE_TYPES[type] || type || "Leave";
-}
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    return diffDays;
+  },
 
-function createLeaveBadge(status) {
-  const badge = document.createElement("span");
-  badge.className = `badge ${LEAVE_BADGES[status] || "badge-muted"}`;
-  badge.textContent = status || "Pending";
-  return badge;
-}
+  getLeaveBalance(employeeId) {
+    if (!employeeId) return { quota: 20, usedDays: 0, remaining: 20 };
+    const employee = StorageService.getEmployeeByEmpId(employeeId);
+    const company = StorageService.getCompany() || {};
+    const quota = employee ? employee.leaveQuota : (company.defaultLeaveQuota || 20);
 
-function getLeaveDays(leave) {
-  const savedDays = Number(leave.days);
+    const allLeaves = StorageService.getEmployeeLeaves(employeeId);
+    const approvedLeaves = allLeaves.filter(l => l && l.status === 'Approved' && l.leaveType !== 'Unpaid');
+    const usedDays = approvedLeaves.reduce((sum, l) => sum + (parseInt(l.daysCount, 10) || 0), 0);
 
-  if (Number.isFinite(savedDays) && savedDays > 0) {
-    return savedDays;
-  }
+    const remaining = Math.max(0, quota - usedDays);
 
-  return countWorkingDays(leave.from, leave.to);
-}
+    return {
+      quota,
+      usedDays,
+      remaining
+    };
+  },
 
-function formatLeavePeriod(leave) {
-  if (!leave.from || !leave.to) return "—";
+  hasOverlappingLeave(employeeId, newStartStr, newEndStr, excludeLeaveId = null) {
+    if (!employeeId || !newStartStr || !newEndStr) return false;
+    const leaves = StorageService.getEmployeeLeaves(employeeId);
+    const nStart = new Date(newStartStr).getTime();
+    const nEnd = new Date(newEndStr).getTime();
 
-  return leave.from === leave.to
-    ? formatDate(leave.from)
-    : `${formatDate(leave.from)} → ${formatDate(leave.to)}`;
-}
+    return leaves.some(l => {
+      if (!l) return false;
+      if (excludeLeaveId && l.id === excludeLeaveId) return false;
+      if (l.status === 'Rejected') return false;
 
-function getLeaveBalance(employeeId, year = new Date().getFullYear()) {
-  const settings = getSettings() || {};
-  const quota = Math.max(0, Number(settings.leaveQuota) || 0);
+      const exStart = new Date(l.startDate).getTime();
+      const exEnd = new Date(l.endDate).getTime();
 
-  const mine = getLeaves().filter((leave) => {
-    return (
-      String(leave.employeeId) === String(employeeId) &&
-      leave.from &&
-      leave.from.startsWith(String(year))
-    );
-  });
+      return nStart <= exEnd && nEnd >= exStart;
+    });
+  },
 
-  const sumDays = (status) =>
-    mine
-      .filter((leave) => leave.status === status)
-      .reduce((total, leave) => total + getLeaveDays(leave), 0);
+  applyLeave(formData) {
+    const { employeeId, leaveType, startDate, endDate, reason } = formData;
 
-  const used = sumDays("Approved");
-  const pending = sumDays("Pending");
-
-  return {
-    quota,
-    used,
-    pending,
-    remaining: Math.max(quota - used, 0),
-    available: Math.max(quota - used - pending, 0),
-  };
-}
-
-/* =========================================================
-   Page setup
-   ========================================================= */
-
-document.addEventListener("DOMContentLoaded", () => {
-  const user = getCurrentUser();
-
-  // Employee leave form (if present on the page)
-  const leaveForm = document.getElementById("leaveForm");
-  const leaveType = document.getElementById("leaveType");
-  const leaveFrom = document.getElementById("leaveFrom");
-  const leaveTo = document.getElementById("leaveTo");
-  const leaveReason = document.getElementById("leaveReason");
-  const leaveError = document.getElementById("leaveError");
-  const leaveDaysPreview = document.getElementById("leaveDaysPreview");
-
-  // Employee dashboard
-  const myLeavesBody =
-    document.getElementById("myLeaveTable") ||
-    document.getElementById("myLeavesBody");
-
-  const leaveBalanceEl = document.getElementById("leaveBalance");
-  const leaveQuotaEl = document.getElementById("leaveQuota");
-  const leaveUsedEl = document.getElementById("leaveUsed");
-  const leavePendingEl = document.getElementById("leavePendingDays");
-  const leaveBalanceBar = document.getElementById("leaveBalanceBar");
-
-  // Admin leave management
-  const leavesTableBody = document.getElementById("leavesTableBody");
-  const pendingCount = document.getElementById("pendingCount");
-  const approvedCount = document.getElementById("approvedCount");
-  const rejectedCount = document.getElementById("rejectedCount");
-  const statusFilter = document.getElementById("leaveStatusFilter");
-
-  const reviewCard = document.getElementById("reviewCard");
-  const reviewForm = document.getElementById("leaveReviewForm");
-  const reviewLeaveId = document.getElementById("reviewLeaveId");
-  const reviewSummary = document.getElementById("reviewSummary");
-  const reviewError = document.getElementById("reviewError");
-  const leaveComment = document.getElementById("leaveComment");
-  const cancelReviewBtn = document.getElementById("cancelReviewBtn");
-
-  // Admin dashboard: support both IDs
-  const pendingLeavesBox =
-    document.getElementById("pendingLeavesList") ||
-    document.getElementById("pendingLeaves");
-
-  function createCell(content) {
-    const cell = document.createElement("td");
-
-    if (content instanceof Node) {
-      cell.appendChild(content);
-    } else {
-      cell.textContent = content ?? "";
+    if (!employeeId || !leaveType || !startDate || !endDate || !reason) {
+      return { success: false, message: 'Please fill out all required fields.' };
     }
 
-    return cell;
-  }
-
-  function createEmptyRow(message, columns) {
-    const row = document.createElement("tr");
-    row.className = "empty-row";
-
-    const cell = createCell(message);
-    cell.colSpan = columns;
-    row.appendChild(cell);
-
-    return row;
-  }
-
-  function showLeaveError(message = "") {
-    if (leaveError) leaveError.textContent = message;
-  }
-
-  function showReviewError(message = "") {
-    if (reviewError) reviewError.textContent = message;
-  }
-
-  /* =========================================================
-     Employee: date preview and leave application
-     ========================================================= */
-
-  function updateDatePreview() {
-    if (!leaveDaysPreview || !leaveFrom || !leaveTo) return;
-
-    if (
-      !leaveFrom.value ||
-      !leaveTo.value ||
-      leaveTo.value < leaveFrom.value
-    ) {
-      leaveDaysPreview.textContent = "";
-      return;
+    if (startDate > endDate) {
+      return { success: false, message: 'Leave start date cannot be after end date.' };
     }
 
-    const days = countWorkingDays(leaveFrom.value, leaveTo.value);
+    const todayStr = StorageService.getLocalDate();
+    if (startDate < todayStr) {
+      return { success: false, message: 'Leave applications cannot be submitted for past dates. Please select today or a future date.' };
+    }
 
-    leaveDaysPreview.textContent =
-      `${days} working day${days === 1 ? "" : "s"} selected`;
-  }
+    if (this.hasOverlappingLeave(employeeId, startDate, endDate)) {
+      return {
+        success: false,
+        message: 'You already have an existing pending or approved leave request covering these dates.'
+      };
+    }
 
-  function setupDateInputs() {
-    if (!leaveFrom || !leaveTo) return;
+    const daysCount = this.calculateDays(startDate, endDate);
+    if (daysCount <= 0) {
+      return { success: false, message: 'Invalid leave duration.' };
+    }
 
-    const today = getToday();
-
-    leaveFrom.min = today;
-    leaveTo.min = today;
-
-    leaveFrom.addEventListener("change", () => {
-      leaveTo.min = leaveFrom.value || today;
-
-      if (leaveTo.value && leaveTo.value < leaveFrom.value) {
-        leaveTo.value = leaveFrom.value;
+    if (leaveType !== 'Unpaid') {
+      const balance = this.getLeaveBalance(employeeId);
+      if (daysCount > balance.remaining) {
+        return {
+          success: false,
+          message: `Insufficient leave balance. You requested ${daysCount} day(s), but only have ${balance.remaining} day(s) remaining.`
+        };
       }
+    }
 
-      updateDatePreview();
+    const newLeave = StorageService.addLeave({
+      employeeId,
+      leaveType,
+      startDate,
+      endDate,
+      daysCount,
+      reason: reason.trim()
     });
 
-    leaveTo.addEventListener("change", updateDatePreview);
-  }
+    return {
+      success: true,
+      message: 'Leave application submitted successfully for review.',
+      leave: newLeave
+    };
+  },
 
-  function submitLeave(event) {
-    event.preventDefault();
-    showLeaveError("");
+  approveLeave(leaveId, comment = '') {
+    const leave = StorageService.getLeaveById(leaveId);
+    if (!leave) return { success: false, message: 'Leave request not found.' };
 
-    if (!user || user.role !== "employee") {
-      showLeaveError("Please log in as an employee.");
-      return;
+    if (leave.status === 'Approved') {
+      return { success: false, message: 'This leave request has already been approved.' };
     }
 
-    if (!leaveType || !leaveFrom || !leaveTo || !leaveReason) {
-      showLeaveError("The leave form is missing required fields.");
-      return;
+    if (leave.leaveType !== 'Unpaid') {
+      const balance = this.getLeaveBalance(leave.employeeId);
+      if (leave.daysCount > balance.remaining) {
+        return {
+          success: false,
+          message: `Cannot approve: Employee only has ${balance.remaining} remaining day(s), but request is for ${leave.daysCount} day(s).`
+        };
+      }
     }
 
-    const type = leaveType.value;
-    const from = leaveFrom.value;
-    const to = leaveTo.value;
-    const reason = leaveReason.value.trim();
-
-    if (!type || !from || !to || !reason) {
-      showLeaveError("Please fill in all fields.");
-      return;
-    }
-
-    if (from < getToday()) {
-      showLeaveError("Leave cannot start in the past.");
-      return;
-    }
-
-    if (to < from) {
-      showLeaveError("The end date cannot be before the start date.");
-      return;
-    }
-
-    const days = countWorkingDays(from, to);
-
-    if (days < 1) {
-      showLeaveError("The selected dates have no working days.");
-      return;
-    }
-
-    const leaves = getLeaves();
-
-    const overlapping = leaves.some((leave) => {
-      return (
-        String(leave.employeeId) === String(user.id) &&
-        leave.status !== "Rejected" &&
-        from <= leave.to &&
-        to >= leave.from
-      );
+    const updated = StorageService.updateLeave(leaveId, {
+      status: 'Approved',
+      adminComment: comment ? comment.trim() : 'Approved by Administrator',
+      reviewedAt: new Date().toISOString()
     });
 
-    if (overlapping) {
-      showLeaveError(
-        "You already have a pending or approved leave on these dates."
-      );
-      return;
+    return {
+      success: true,
+      message: `Leave request approved successfully. ${leave.daysCount} day(s) deducted.`,
+      leave: updated
+    };
+  },
+
+  rejectLeave(leaveId, comment = '') {
+    const leave = StorageService.getLeaveById(leaveId);
+    if (!leave) return { success: false, message: 'Leave request not found.' };
+
+    if (leave.status === 'Rejected') {
+      return { success: false, message: 'This leave request has already been rejected.' };
     }
 
-    const balance = getLeaveBalance(
-      user.id,
-      Number(from.slice(0, 4))
-    );
-
-    if (days > balance.available) {
-      showLeaveError(
-        `You can request only ${balance.available} more day(s).`
-      );
-      return;
-    }
-
-    leaves.push({
-      id: generateId(),
-      employeeId: user.id,
-      employeeName: user.name || user.fullName || "Employee",
-      type,
-      from,
-      to,
-      days,
-      reason,
-      status: "Pending",
-      comment: "",
-      createdAt: new Date().toISOString(),
+    const updated = StorageService.updateLeave(leaveId, {
+      status: 'Rejected',
+      adminComment: comment ? comment.trim() : 'Rejected by Administrator',
+      reviewedAt: new Date().toISOString()
     });
 
-    if (!saveData(STORAGE_KEYS.leaves, leaves)) {
-      showLeaveError("Could not save your leave request.");
-      return;
-    }
+    return {
+      success: true,
+      message: 'Leave request rejected. No leave quota deducted.',
+      leave: updated
+    };
+  },
 
-    leaveForm.reset();
-    updateDatePreview();
+  renderAdminLeavesTable() {
+    const tableBody = document.getElementById('adminLeavesTableBody');
+    const emptyState = document.getElementById('leavesEmptyState');
+    const tableContainer = document.getElementById('leavesTableContainer');
 
-    showToast("Leave request submitted", "success");
-    renderAll();
-  }
+    if (!tableBody) return;
 
-  function cancelLeave(leave) {
-    if (!leave || leave.status !== "Pending") return;
+    const allLeaves = StorageService.getLeaves();
+    const statusFilter = document.getElementById('filterLeaveStatus')?.value || 'all';
+    const typeFilter = document.getElementById('filterLeaveType')?.value || 'all';
+    const searchQuery = (document.getElementById('searchLeave')?.value || '').toLowerCase().trim();
 
-    if (!confirm("Cancel this leave request?")) return;
+    const employees = StorageService.getEmployees();
 
-    const remaining = getLeaves().filter((item) => {
-      return !(
-        String(item.id) === String(leave.id) &&
-        item.status === "Pending"
-      );
+    const filtered = allLeaves.filter(leave => {
+      if (!leave) return false;
+      const emp = employees.find(e => e && e.employeeId === leave.employeeId);
+      const empName = emp ? emp.fullName.toLowerCase() : '';
+      const empId = (leave.employeeId || '').toLowerCase();
+      const reason = (leave.reason || '').toLowerCase();
+
+      const matchSearch = empName.includes(searchQuery) || empId.includes(searchQuery) || reason.includes(searchQuery);
+      const matchStatus = statusFilter === 'all' || leave.status === statusFilter;
+      const matchType = typeFilter === 'all' || leave.leaveType === typeFilter;
+
+      return matchSearch && matchStatus && matchType;
     });
-
-    if (!saveData(STORAGE_KEYS.leaves, remaining)) {
-      showToast("Could not cancel the leave request", "error");
-      return;
-    }
-
-    showToast("Leave request cancelled", "success");
-    renderAll();
-  }
-
-  function renderBalance() {
-    if (!leaveBalanceEl || !user || user.role !== "employee") return;
-
-    const balance = getLeaveBalance(user.id);
-
-    leaveBalanceEl.textContent = balance.remaining;
-
-    if (leaveQuotaEl) leaveQuotaEl.textContent = balance.quota;
-    if (leaveUsedEl) leaveUsedEl.textContent = balance.used;
-    if (leavePendingEl) leavePendingEl.textContent = balance.pending;
-
-    if (leaveBalanceBar) {
-      const percent =
-        balance.quota > 0
-          ? (balance.remaining / balance.quota) * 100
-          : 0;
-
-      leaveBalanceBar.style.width = `${percent}%`;
-      leaveBalanceBar.setAttribute("aria-valuenow", String(percent));
-    }
-  }
-
-  function renderMyLeaves() {
-    if (!myLeavesBody || !user || user.role !== "employee") return;
-
-    const mine = getLeaves()
-      .filter(
-        (leave) => String(leave.employeeId) === String(user.id)
-      )
-      .sort((a, b) => (b.from || "").localeCompare(a.from || ""));
-
-    myLeavesBody.innerHTML = "";
-
-    if (mine.length === 0) {
-      // Employee dashboard table has five columns
-      myLeavesBody.appendChild(
-        createEmptyRow("You have not requested any leave yet.", 5)
-      );
-      return;
-    }
-
-    mine.forEach((leave) => {
-      const row = document.createElement("tr");
-
-      row.append(
-        createCell(formatLeaveType(leave.type)),
-        createCell(leave.from ? formatDate(leave.from) : "—"),
-        createCell(leave.to ? formatDate(leave.to) : "—"),
-        createCell(getLeaveDays(leave)),
-        createCell(createLeaveBadge(leave.status))
-      );
-
-      myLeavesBody.appendChild(row);
-    });
-  }
-
-  /* =========================================================
-     Admin: leave table and review form
-     ========================================================= */
-
-  function openReview(leave) {
-    if (!reviewCard || !reviewForm) return;
-
-    const balance = getLeaveBalance(
-      leave.employeeId,
-      Number((leave.from || "").slice(0, 4)) ||
-        new Date().getFullYear()
-    );
-
-    if (reviewLeaveId) reviewLeaveId.value = leave.id;
-
-    if (reviewSummary) {
-      reviewSummary.textContent =
-        `${leave.employeeName || "Employee"} · ` +
-        `${formatLeaveType(leave.type)} · ` +
-        `${formatLeavePeriod(leave)} · ` +
-        `${getLeaveDays(leave)} day(s). ` +
-        `Reason: ${leave.reason || "Not provided"}. ` +
-        `Balance left: ${balance.remaining} of ${balance.quota} days.`;
-    }
-
-    if (leaveComment) leaveComment.value = "";
-    showReviewError("");
-
-    reviewCard.hidden = false;
-    reviewCard.scrollIntoView({
-      behavior: "smooth",
-      block: "center",
-    });
-
-    if (leaveComment) leaveComment.focus();
-  }
-
-  function closeReview() {
-    if (!reviewCard) return;
-
-    if (reviewForm) reviewForm.reset();
-    if (reviewLeaveId) reviewLeaveId.value = "";
-
-    showReviewError("");
-    reviewCard.hidden = true;
-  }
-
-  function renderLeaveTable() {
-    if (!leavesTableBody) return;
-
-    const leaves = getLeaves();
-
-    if (pendingCount) {
-      pendingCount.textContent = leaves.filter(
-        (leave) => leave.status === "Pending"
-      ).length;
-    }
-
-    if (approvedCount) {
-      approvedCount.textContent = leaves.filter(
-        (leave) => leave.status === "Approved"
-      ).length;
-    }
-
-    if (rejectedCount) {
-      rejectedCount.textContent = leaves.filter(
-        (leave) => leave.status === "Rejected"
-      ).length;
-    }
-
-    const selected = statusFilter?.value || "all";
-
-    const filtered = leaves
-      .filter(
-        (leave) => selected === "all" || leave.status === selected
-      )
-      .sort((a, b) => {
-        if (a.status === "Pending" && b.status !== "Pending") return -1;
-        if (b.status === "Pending" && a.status !== "Pending") return 1;
-
-        return (b.createdAt || "").localeCompare(a.createdAt || "");
-      });
-
-    leavesTableBody.innerHTML = "";
 
     if (filtered.length === 0) {
-      leavesTableBody.appendChild(
-        createEmptyRow("No leave requests found.", 8)
-      );
+      tableBody.innerHTML = '';
+      if (emptyState) emptyState.style.display = 'block';
+      if (tableContainer) tableContainer.style.display = 'none';
       return;
     }
 
-    filtered.forEach((leave) => {
-      const row = document.createElement("tr");
+    if (emptyState) emptyState.style.display = 'none';
+    if (tableContainer) tableContainer.style.display = 'block';
 
-      let action = "-";
+    tableBody.innerHTML = filtered.map(leave => {
+      const emp = employees.find(e => e && e.employeeId === leave.employeeId);
+      const empName = emp ? emp.fullName : 'Unknown Employee';
+      const empDept = emp ? emp.department : '-';
 
-      if (leave.status === "Pending") {
-        action = document.createElement("button");
-        action.type = "button";
-        action.className = "btn btn-primary btn-sm";
-        action.textContent = "Review";
-        action.addEventListener("click", () => openReview(leave));
+      const statusBadge =
+        leave.status === 'Approved' ? 'badge-approved' :
+        leave.status === 'Rejected' ? 'badge-rejected' : 'badge-pending';
+
+      const actions = leave.status === 'Pending' ? `
+        <button type="button" class="btn btn-success btn-sm" onclick="LeaveModule.openDecisionModal('${leave.id}', 'approve')">
+          ✓ Approve
+        </button>
+        <button type="button" class="btn btn-danger btn-sm" onclick="LeaveModule.openDecisionModal('${leave.id}', 'reject')">
+          ✕ Reject
+        </button>
+      ` : `
+        <span style="font-size: 0.8rem; color: var(--text-muted);">${leave.adminComment || 'Decided'}</span>
+      `;
+
+      return `
+        <tr>
+          <td>
+            <div style="font-weight: 600; color: var(--text-primary);">${this.escapeHtml(empName)}</div>
+            <div style="font-size: 0.775rem; color: var(--text-muted);">${leave.employeeId} &bull; ${this.escapeHtml(empDept)}</div>
+          </td>
+          <td><strong>${leave.leaveType}</strong></td>
+          <td>${leave.startDate} to ${leave.endDate}</td>
+          <td><strong>${leave.daysCount} day(s)</strong></td>
+          <td style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${this.escapeHtml(leave.reason)}">
+            ${this.escapeHtml(leave.reason)}
+          </td>
+          <td>
+            <span class="badge ${statusBadge}">
+              <span class="badge-dot"></span>
+              ${leave.status}
+            </span>
+          </td>
+          <td>
+            <div style="display: flex; gap: 0.35rem; align-items: center;">
+              ${actions}
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  },
+
+  openDecisionModal(leaveId, action) {
+    this.currentDecisionLeaveId = leaveId;
+    const leave = StorageService.getLeaveById(leaveId);
+    if (!leave) return;
+
+    const modal = document.getElementById('leaveDecisionModal');
+    const title = document.getElementById('decisionModalTitle');
+    const commentInput = document.getElementById('decisionComment');
+    const submitBtn = document.getElementById('submitDecisionBtn');
+
+    if (commentInput) commentInput.value = '';
+
+    if (action === 'approve') {
+      if (title) title.textContent = 'Approve Leave Request';
+      if (submitBtn) {
+        submitBtn.textContent = 'Confirm Approval';
+        submitBtn.className = 'btn btn-success';
+        submitBtn.onclick = () => this.handleDecisionSubmit(leaveId, 'approve');
       }
-
-      row.append(
-        createCell(leave.employeeName || "Employee"),
-        createCell(formatLeaveType(leave.type)),
-        createCell(formatLeavePeriod(leave)),
-        createCell(getLeaveDays(leave)),
-        createCell(leave.reason || "—"),
-        createCell(createLeaveBadge(leave.status)),
-        createCell(leave.comment || "—"),
-        createCell(action)
-      );
-
-      leavesTableBody.appendChild(row);
-    });
-  }
-
-  function submitReview(event) {
-    event.preventDefault();
-    showReviewError("");
-
-    if (!user || user.role !== "admin") {
-      showReviewError("Only an admin can review leave requests.");
-      return;
-    }
-
-    const decision = event.submitter?.value;
-
-    if (decision !== "approved" && decision !== "rejected") {
-      showReviewError("Please choose Approve or Reject.");
-      return;
-    }
-
-    const comment = leaveComment?.value.trim() || "";
-
-    if (decision === "rejected" && !comment) {
-      showReviewError(
-        "Please add a comment explaining the rejection."
-      );
-      return;
-    }
-
-    const leaves = getLeaves();
-
-    const leave = leaves.find(
-      (item) =>
-        String(item.id) === String(reviewLeaveId?.value || "")
-    );
-
-    if (!leave) {
-      showReviewError("Leave request not found.");
-      return;
-    }
-
-    if (leave.status !== "Pending") {
-      showReviewError("This request has already been reviewed.");
-      return;
-    }
-
-    if (decision === "approved") {
-      const balance = getLeaveBalance(
-        leave.employeeId,
-        Number((leave.from || "").slice(0, 4)) ||
-          new Date().getFullYear()
-      );
-
-      if (getLeaveDays(leave) > balance.remaining) {
-        showReviewError(
-          `${leave.employeeName || "Employee"} has only ` +
-          `${balance.remaining} leave day(s) left, but this request ` +
-          `needs ${getLeaveDays(leave)}.`
-        );
-        return;
+    } else {
+      if (title) title.textContent = 'Reject Leave Request';
+      if (submitBtn) {
+        submitBtn.textContent = 'Confirm Rejection';
+        submitBtn.className = 'btn btn-danger';
+        submitBtn.onclick = () => this.handleDecisionSubmit(leaveId, 'reject');
       }
     }
 
-    leave.status =
-      decision === "approved" ? "Approved" : "Rejected";
+    modal?.classList.add('active');
+  },
 
-    leave.comment = comment;
-    leave.reviewedAt = new Date().toISOString();
+  closeDecisionModal() {
+    const modal = document.getElementById('leaveDecisionModal');
+    modal?.classList.remove('active');
+    this.currentDecisionLeaveId = null;
+  },
 
-    if (!saveData(STORAGE_KEYS.leaves, leaves)) {
-      showReviewError("Could not save the review.");
-      return;
+  handleDecisionSubmit(leaveId, action) {
+    const comment = document.getElementById('decisionComment')?.value || '';
+    let result;
+
+    if (action === 'approve') {
+      result = this.approveLeave(leaveId, comment);
+    } else {
+      result = this.rejectLeave(leaveId, comment);
     }
 
-    showToast(
-      `Leave request ${leave.status.toLowerCase()}`,
-      "success"
-    );
-
-    closeReview();
-    renderAll();
-  }
-
-  /* =========================================================
-     Admin dashboard: pending leave list
-     ========================================================= */
-
-  function renderPendingList() {
-    if (!pendingLeavesBox) return;
-
-    const pending = getLeaves()
-      .filter((leave) => leave.status === "Pending")
-      .sort((a, b) =>
-        (b.createdAt || "").localeCompare(a.createdAt || "")
-      );
-
-    pendingLeavesBox.innerHTML = "";
-
-    if (pending.length === 0) {
-      const empty = document.createElement("p");
-      empty.className = "muted";
-      empty.textContent = "No pending leave requests.";
-      pendingLeavesBox.appendChild(empty);
-      return;
+    if (result.success) {
+      this.closeDecisionModal();
+      this.renderAdminLeavesTable();
+      if (window.showToast) {
+        window.showToast(result.message, action === 'approve' ? 'success' : 'info');
+      } else {
+        alert(result.message);
+      }
+    } else {
+      if (window.showToast) {
+        window.showToast(result.message, 'error');
+      } else {
+        alert(result.message);
+      }
     }
+  },
 
-    pending.slice(0, 5).forEach((leave) => {
-      const item = document.createElement("div");
-      item.className = "pending-item";
-
-      const info = document.createElement("div");
-      info.className = "pending-info";
-
-      const name = document.createElement("strong");
-      name.textContent = leave.employeeName || "Employee";
-
-      const details = document.createElement("small");
-      details.textContent =
-        `${formatLeaveType(leave.type)} · ` +
-        `${formatLeavePeriod(leave)} · ` +
-        `${getLeaveDays(leave)} day(s)`;
-
-      info.append(name, details);
-
-      const link = document.createElement("a");
-      link.className = "btn btn-secondary btn-sm";
-      link.href = `leaves.html?review=${encodeURIComponent(leave.id)}`;
-      link.textContent = "Review";
-
-      item.append(info, link);
-      pendingLeavesBox.appendChild(item);
-    });
-
-    if (pending.length > 5) {
-      const more = document.createElement("p");
-      more.className = "muted pending-more";
-      more.textContent = `+ ${pending.length - 5} more pending`;
-      pendingLeavesBox.appendChild(more);
-    }
+  escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
   }
+};
 
-  /* =========================================================
-     Render and events
-     ========================================================= */
-
-  function renderAll() {
-    renderBalance();
-    renderMyLeaves();
-    renderLeaveTable();
-    renderPendingList();
-  }
-
-  leaveForm?.addEventListener("submit", submitLeave);
-
-  leaveForm?.addEventListener("input", () => {
-    showLeaveError("");
-  });
-
-  reviewForm?.addEventListener("submit", submitReview);
-  cancelReviewBtn?.addEventListener("click", closeReview);
-  statusFilter?.addEventListener("change", renderLeaveTable);
-
-  window.addEventListener("storage", (event) => {
-    if (
-      event.key === STORAGE_KEYS.leaves ||
-      event.key === STORAGE_KEYS.settings
-    ) {
-      renderAll();
-    }
-  });
-
-  setupDateInputs();
-  renderAll();
-
-  // Open the selected pending request from the dashboard link
-  const reviewId = new URLSearchParams(location.search).get("review");
-
-  if (reviewId && reviewCard) {
-    const target = getLeaves().find(
-      (leave) =>
-        String(leave.id) === reviewId &&
-        leave.status === "Pending"
-    );
-
-    if (target) openReview(target);
-  }
-});
+window.LeaveModule = LeaveModule;

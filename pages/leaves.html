@@ -1,137 +1,285 @@
-
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HCM Lite | Leave Management</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Leave Management - HCM Lite</title>
+    <link rel="stylesheet" href="../css/style.css" />
+  </head>
+  <body>
+    <div class="app-container">
+      <aside class="sidebar" id="appSidebar">
+        <div class="sidebar-header">
+          <a href="admin.html" class="brand-badge">
+            <div class="brand-icon">⚡</div>
+            <div>
+              <div class="brand-text">HCM Lite</div>
+              <span class="brand-subtitle company-name-display">Acme Corp</span>
+            </div>
+          </a>
+          <button type="button" class="sidebar-close-btn" id="sidebarCloseBtn">
+            &times;
+          </button>
+        </div>
 
-  <link rel="stylesheet" href="../css/style.css">
-  <link rel="stylesheet" href="../css/leaves.css">
+        <nav class="sidebar-nav">
+          <div class="nav-section-title">Main Menu</div>
+          <a href="admin.html" class="nav-item">
+            <span class="icon">📊</span>
+            <span>Dashboard</span>
+          </a>
+          <a href="employees.html" class="nav-item">
+            <span class="icon">👥</span>
+            <span>Manage Employees</span>
+          </a>
+          <a href="leaves.html" class="nav-item active">
+            <span class="icon">📅</span>
+            <span>Leave Requests</span>
+          </a>
+          <a href="payslip.html" class="nav-item">
+            <span class="icon">💰</span>
+            <span>Monthly Payslips</span>
+          </a>
+          <a href="settings.html" class="nav-item">
+            <span class="icon">⚙️</span>
+            <span>Company Settings</span>
+          </a>
+        </nav>
 
-  <script src="../js/storage.js"></script>
-  <script src="../js/auth.js" data-role="admin"></script>
-  <script src="../js/theme.js" defer></script>
-  <script src="../js/leave.js" defer></script>
-</head>
-<body>
-  <div class="app-layout">
-    <aside class="sidebar">
-      <div class="sidebar-brand">
-        <div class="brand-icon">H</div>
-        <span>HCM Lite</span>
+        <div class="sidebar-footer">
+          <div class="user-profile-summary">
+            <div class="user-avatar" id="adminAvatar">AD</div>
+            <div class="user-info-text">
+              <div class="user-name" id="adminUserName">Administrator</div>
+              <div class="user-role-badge">System Admin</div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <div class="main-wrapper">
+        <header class="topbar">
+          <div class="topbar-left">
+            <button type="button" class="mobile-menu-btn" id="mobileMenuBtn">
+              ☰
+            </button>
+            <h1 class="page-title">Leave Applications & Approvals</h1>
+          </div>
+          <div class="topbar-right">
+            <button
+              type="button"
+              class="btn btn-outline btn-sm theme-toggle-btn"
+            >
+              <span class="icon">🌙</span>
+              <span class="theme-text">Dark Mode</span>
+            </button>
+            <button type="button" class="btn btn-outline btn-sm logout-btn">
+              🚪 Sign Out
+            </button>
+          </div>
+        </header>
+
+        <main class="page-content">
+          <div class="card" style="margin-bottom: 1.5rem">
+            <div class="card-body" style="padding: 1.25rem">
+              <div
+                style="
+                  display: flex;
+                  gap: 1rem;
+                  flex-wrap: wrap;
+                  align-items: center;
+                "
+              >
+                <input
+                  type="text"
+                  id="searchLeave"
+                  class="form-control"
+                  placeholder="Search by employee name, ID, or reason..."
+                  style="flex: 2; min-width: 220px"
+                />
+                <select
+                  id="filterLeaveStatus"
+                  class="form-control"
+                  style="flex: 1; min-width: 150px"
+                >
+                  <option value="all">All Statuses</option>
+                  <option value="Pending">Pending Review</option>
+                  <option value="Approved">Approved</option>
+                  <option value="Rejected">Rejected</option>
+                </select>
+                <select
+                  id="filterLeaveType"
+                  class="form-control"
+                  style="flex: 1; min-width: 140px"
+                >
+                  <option value="all">All Leave Types</option>
+                  <option value="Annual">Annual Leave</option>
+                  <option value="Sick">Sick Leave</option>
+                  <option value="Casual">Casual Leave</option>
+                  <option value="Unpaid">Unpaid Leave</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <h3 class="card-title">Employee Leave Applications</h3>
+                <p class="card-subtitle">
+                  Review, validate remaining quotas, and approve or reject
+                  requests
+                </p>
+              </div>
+            </div>
+            <div class="card-body" style="padding: 0">
+              <div id="leavesTableContainer" class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Employee</th>
+                      <th>Type</th>
+                      <th>Date Period</th>
+                      <th>Duration</th>
+                      <th>Reason</th>
+                      <th>Status</th>
+                      <th>Decision</th>
+                    </tr>
+                  </thead>
+                  <tbody id="adminLeavesTableBody"></tbody>
+                </table>
+              </div>
+
+              <div
+                id="leavesEmptyState"
+                class="empty-state"
+                style="display: none"
+              >
+                <div class="empty-state-icon">🏖️</div>
+                <div class="empty-state-title">No leave requests found</div>
+                <p class="empty-state-text">
+                  There are currently no leave requests matching your selected
+                  filters.
+                </p>
+              </div>
+            </div>
+          </div>
+        </main>
       </div>
+    </div>
 
-      <nav class="sidebar-nav">
-        <a href="admin.html" class="nav-link"><span>▦</span> Dashboard</a>
-        <a href="employees.html" class="nav-link"><span>♙</span> Employees</a>
-        <a href="leaves.html" class="nav-link active"><span>▣</span> Leave Management</a>
-        <a href="payslip.html" class="nav-link"><span>▤</span> Payroll</a>
-        <a href="settings.html" class="nav-link"><span>⚙</span> Settings</a>
-      </nav>
-
-      <div class="sidebar-footer">
-        <button id="themeToggle" class="nav-link" type="button">
-          <span>◐</span> Toggle Theme
-        </button>
-        <button id="logoutBtn" class="nav-link" type="button">
-          <span>↪</span> Logout
-        </button>
+    <div class="modal-overlay" id="leaveDecisionModal">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3 class="modal-title" id="decisionModalTitle">
+            Review Leave Request
+          </h3>
+          <button
+            type="button"
+            class="modal-close-btn"
+            onclick="LeaveModule.closeDecisionModal()"
+          >
+            &times;
+          </button>
+        </div>
+        <div class="modal-body">
+          <p
+            style="
+              font-size: 0.9rem;
+              color: var(--text-secondary);
+              margin-bottom: 1rem;
+            "
+          >
+            Add an administrative note or feedback for this decision. This note
+            will be visible to the employee on their portal.
+          </p>
+          <div class="form-group">
+            <label class="form-label" for="decisionComment"
+              >Admin Comment / Remarks</label
+            >
+            <textarea
+              id="decisionComment"
+              class="form-control"
+              rows="3"
+              placeholder="e.g. Approved. Enjoy your time off! or Rejected due to project deadlines."
+            ></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            onclick="LeaveModule.closeDecisionModal()"
+          >
+            Cancel
+          </button>
+          <button type="button" class="btn btn-primary" id="submitDecisionBtn">
+            Confirm
+          </button>
+        </div>
       </div>
-    </aside>
+    </div>
 
-    <main class="main-content">
-      <header class="topbar">
-        <div>
-          <h1>Leave Management</h1>
-          <p class="muted">Review and manage employee leave requests.</p>
-        </div>
-      </header>
+    <script src="../js/storage.js"></script>
+    <script src="../js/auth.js"></script>
+    <script src="../js/leave.js"></script>
+    <script src="../js/helper.js"></script>
 
-      <section class="dashboard-grid">
-        <div class="card">
-          <h3>Pending Requests</h3>
-          <p class="stat-number" id="pendingCount">0</p>
-        </div>
-        <div class="card">
-          <h3>Approved Requests</h3>
-          <p class="stat-number" id="approvedCount">0</p>
-        </div>
-        <div class="card">
-          <h3>Rejected Requests</h3>
-          <p class="stat-number" id="rejectedCount">0</p>
-        </div>
-      </section>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        if (!AuthService.requireAuth("admin")) return;
 
-      <section class="card">
-        <div class="section-heading">
-          <div>
-            <h2>All Leave Requests</h2>
-            <p class="muted">Select a pending request to review it.</p>
-          </div>
+        const session = AuthService.getSession();
+        const company = StorageService.getCompany() || {};
 
-          <div class="form-group">
-            <label for="leaveStatusFilter">Filter by status</label>
-            <select id="leaveStatusFilter">
-              <option value="all">All requests</option>
-              <option value="Pending">Pending</option>
-              <option value="Approved">Approved</option>
-              <option value="Rejected">Rejected</option>
-            </select>
-          </div>
-        </div>
+        if (session) {
+          document.getElementById("adminUserName").textContent =
+            session.fullName;
+          const initials = session.fullName
+            .split(" ")
+            .map((n) => n[0])
+            .join("")
+            .substring(0, 2)
+            .toUpperCase();
+          document.getElementById("adminAvatar").textContent = initials || "AD";
+        }
 
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>Employee</th>
-                <th>Leave Type</th>
-                <th>Leave Period</th>
-                <th>Days</th>
-                <th>Reason</th>
-                <th>Status</th>
-                <th>Admin Comment</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody id="leavesTableBody">
-              <tr>
-                <td colspan="8">Loading leave requests...</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
+        const companyDisplays = document.querySelectorAll(
+          ".company-name-display",
+        );
+        companyDisplays.forEach(
+          (el) => (el.textContent = company.companyName || "Acme Corp"),
+        );
 
-      <section class="card" id="reviewCard" hidden>
-        <h2>Review Leave Request</h2>
-        <p id="reviewSummary" class="muted"></p>
+        LeaveModule.renderAdminLeavesTable();
 
-        <form id="leaveReviewForm">
-          <input type="hidden" id="reviewLeaveId">
+        document
+          .getElementById("searchLeave")
+          ?.addEventListener("input", () =>
+            LeaveModule.renderAdminLeavesTable(),
+          );
+        document
+          .getElementById("filterLeaveStatus")
+          ?.addEventListener("change", () =>
+            LeaveModule.renderAdminLeavesTable(),
+          );
+        document
+          .getElementById("filterLeaveType")
+          ?.addEventListener("change", () =>
+            LeaveModule.renderAdminLeavesTable(),
+          );
 
-          <div class="form-group">
-            <label for="leaveComment">Comment</label>
-            <textarea id="leaveComment" rows="3" placeholder="Add a comment (required when rejecting)"></textarea>
-          </div>
+        const mobileBtn = document.getElementById("mobileMenuBtn");
+        const sidebarCloseBtn = document.getElementById("sidebarCloseBtn");
+        const sidebar = document.getElementById("appSidebar");
 
-          <p id="reviewError" class="form-error" role="alert"></p>
-
-          <div class="form-actions">
-            <button class="btn btn-primary" type="submit" name="decision" value="approved">
-              Approve Request
-            </button>
-            <button class="btn btn-secondary" type="submit" name="decision" value="rejected">
-              Reject Request
-            </button>
-            <button id="cancelReviewBtn" class="btn btn-secondary" type="button">
-              Cancel
-            </button>
-          </div>
-        </form>
-      </section>
-    </main>
-  </div>
-</body>
+        mobileBtn?.addEventListener("click", () =>
+          sidebar.classList.add("open"),
+        );
+        sidebarCloseBtn?.addEventListener("click", () =>
+          sidebar.classList.remove("open"),
+        );
+      });
+    </script>
+  </body>
 </html>

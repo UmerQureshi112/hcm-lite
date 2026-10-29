@@ -3,208 +3,548 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HCM Lite | Employee Dashboard</title>
-
+  <title>Employee Portal - HCM Lite</title>
   <link rel="stylesheet" href="../css/style.css">
-  <link rel="stylesheet" href="../css/employee.css">
-
-  <script src="../js/storage.js"></script>
-  <script src="../js/auth.js" data-role="employee"></script>
-  <script src="../js/theme.js" defer></script>
-  <script src="../js/attendance.js" defer></script>
-  <script src="../js/leave.js" defer></script>
-  <script src="../js/payslip.js" defer></script>
-  <script src="../js/helper.js" defer></script>
 </head>
 <body>
-  <div class="app-layout">
-    <aside class="sidebar">
-      <div class="sidebar-brand">
-        <div class="brand-icon">H</div>
-        <span>HCM Lite</span>
+  <div class="app-container">
+    <aside class="sidebar" id="appSidebar">
+      <div class="sidebar-header">
+        <a href="employee.html" class="brand-badge">
+          <div class="brand-icon">⚡</div>
+          <div>
+            <div class="brand-text">HCM Lite</div>
+            <span class="brand-subtitle company-name-display">Acme Corp</span>
+          </div>
+        </a>
+        <button type="button" class="sidebar-close-btn" id="sidebarCloseBtn">&times;</button>
       </div>
 
       <nav class="sidebar-nav">
-        <a href="employee.html" class="nav-link active">
-          <span>▦</span> Dashboard
+        <div class="nav-section-title">Self-Service</div>
+        <a href="employee.html" class="nav-item active">
+          <span class="icon">👤</span>
+          <span>My Portal</span>
         </a>
-        <a href="employees.html" class="nav-link">
-          <span>♙</span> Employees
-        </a>
-        <a href="leaves.html" class="nav-link">
-          <span>▣</span> Leave Management
-        </a>
-        <a href="payslip.html" class="nav-link">
-          <span>▤</span> Payslips
-        </a>
-        <a href="settings.html" class="nav-link">
-          <span>⚙</span> Settings
+        <a href="payslip.html" class="nav-item">
+          <span class="icon">💰</span>
+          <span>My Payslip</span>
         </a>
       </nav>
 
       <div class="sidebar-footer">
-        <button id="themeToggle" class="nav-link" type="button">
-          <span>◐</span> Toggle Theme
-        </button>
-        <button id="logoutBtn" class="nav-link" type="button">
-          <span>↪</span> Logout
-        </button>
+        <div class="user-profile-summary">
+          <div class="user-avatar" id="empAvatar">EM</div>
+          <div class="user-info-text">
+            <div class="user-name" id="empUserName">Employee</div>
+            <div class="user-role-badge" id="empUserTitle">Staff</div>
+          </div>
+        </div>
       </div>
     </aside>
 
-    <main class="main-content">
+    <div class="main-wrapper">
       <header class="topbar">
-        <div>
-          <h1>Employee Dashboard</h1>
-          <p class="muted">Welcome back to HCM Lite.</p>
+        <div class="topbar-left">
+          <button type="button" class="mobile-menu-btn" id="mobileMenuBtn">☰</button>
+          <h1 class="page-title">Employee Self-Service Portal</h1>
         </div>
-        <div class="topbar-user">
-          <span id="employeeName">Employee</span>
+        <div class="topbar-right">
+          <button type="button" class="btn btn-outline btn-sm theme-toggle-btn">
+            <span class="icon">🌙</span> <span class="theme-text">Dark Mode</span>
+          </button>
+          <button type="button" class="btn btn-outline btn-sm logout-btn">
+            🚪 Sign Out
+          </button>
         </div>
       </header>
 
-      <section class="welcome-card card">
-        <div>
-          <p class="muted">Welcome back,</p>
-          <h2 id="welcomeName">Employee</h2>
-          <p id="employeeDesignation" class="muted">Your work overview</p>
-        </div>
-        <div>
-          <span id="currentDate"></span>
-        </div>
-      </section>
-
-      <section class="dashboard-grid">
-        <div class="card">
-          <h3>Today's Attendance</h3>
-          <p id="attendanceStatus">Not checked in</p>
-          <div class="attendance-actions">
-            <button id="checkInBtn" class="btn btn-primary" type="button">
-              Check In
-            </button>
-            <button id="checkOutBtn" class="btn btn-secondary" type="button">
-              Check Out
-            </button>
-          </div>
-          <div class="time-tiles">
-            <div>
-              <span class="muted">Check In</span>
-              <strong id="checkInTime">--:--</strong>
-            </div>
-            <div>
-              <span class="muted">Check Out</span>
-              <strong id="checkOutTime">--:--</strong>
-            </div>
-            <div>
-              <span class="muted">Work Hours</span>
-              <strong id="workHours">0h 0m</strong>
+      <main class="page-content">
+        <div class="card" style="background: linear-gradient(135deg, var(--bg-surface), var(--bg-surface-subtle)); margin-bottom: 1.5rem;">
+          <div class="card-body" style="padding: 1.5rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+              <div style="display: flex; align-items: center; gap: 1rem;">
+                <div class="user-avatar" id="empBigAvatar" style="width: 54px; height: 54px; font-size: 1.35rem; background: var(--primary-600);">
+                  EM
+                </div>
+                <div>
+                  <h2 style="font-size: 1.3rem; font-weight: 700;" id="empBannerName">Employee Name</h2>
+                  <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.15rem;">
+                    <span class="font-mono" id="empBannerId">EMP-001</span> &bull; <span id="empBannerDept">Department</span> &bull; <span id="empBannerTitle">Title</span>
+                  </p>
+                </div>
+              </div>
+              <div>
+                <a href="payslip.html" class="btn btn-primary">
+                  📄 View Monthly Payslip
+                </a>
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="card">
-          <h3>Leave Balance</h3>
-          <div class="leave-balance">
-            <strong id="leaveBalance">0</strong>
-            <span class="muted">Days available</span>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <h3 class="card-title">Attendance Punch Clock</h3>
+                <p class="card-subtitle" id="currentLocalDateDisplay">Loading local date...</p>
+              </div>
+              <div style="font-family: monospace; font-size: 1.2rem; font-weight: 700; color: var(--primary-600);" id="liveClockDisplay">
+                00:00:00
+              </div>
+            </div>
+            <div class="card-body">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem;">
+                <div style="font-size: 0.875rem; color: var(--text-muted);">Today's Status:</div>
+                <div id="todayStatusBadgeContainer">
+                  <span class="badge badge-inactive"><span class="badge-dot"></span>Not Checked In</span>
+                </div>
+              </div>
+
+              <div class="form-grid-2" style="background-color: var(--bg-surface-subtle); padding: 0.85rem; border-radius: var(--radius-md); margin-bottom: 1.25rem;">
+                <div>
+                  <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Check-In Time</div>
+                  <div style="font-size: 1.05rem; font-weight: 700;" id="todayCheckInTime">--:--:--</div>
+                </div>
+                <div>
+                  <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Check-Out Time</div>
+                  <div style="font-size: 1.05rem; font-weight: 700;" id="todayCheckOutTime">--:--:--</div>
+                </div>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                <button type="button" class="btn btn-success btn-lg" id="btnPunchCheckIn">
+                  🟢 Check In
+                </button>
+                <button type="button" class="btn btn-danger btn-lg" id="btnPunchCheckOut" disabled>
+                  🔴 Check Out
+                </button>
+              </div>
+            </div>
           </div>
-          <a class="btn btn-primary" href="leaves.html">Request Leave</a>
+
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Leave Balance Overview</h3>
+              <button type="button" class="btn btn-primary btn-sm" id="btnOpenApplyLeaveModal">
+                ✏️ Apply For Leave
+              </button>
+            </div>
+            <div class="card-body">
+              <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; text-align: center; margin-bottom: 1.25rem;">
+                <div style="padding: 1rem; background-color: var(--bg-surface-subtle); border-radius: var(--radius-md);">
+                  <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Total Quota</div>
+                  <div style="font-size: 1.6rem; font-weight: 700; color: var(--text-primary); margin-top: 0.25rem;" id="leaveQuotaDisplay">20</div>
+                  <div style="font-size: 0.7rem; color: var(--text-muted);">Days / year</div>
+                </div>
+
+                <div style="padding: 1rem; background-color: var(--bg-surface-subtle); border-radius: var(--radius-md);">
+                  <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Used Days</div>
+                  <div style="font-size: 1.6rem; font-weight: 700; color: #f59e0b; margin-top: 0.25rem;" id="leaveUsedDisplay">0</div>
+                  <div style="font-size: 0.7rem; color: var(--text-muted);">Approved</div>
+                </div>
+
+                <div style="padding: 1rem; background-color: var(--primary-50); border: 1px solid var(--primary-100); border-radius: var(--radius-md);">
+                  <div style="font-size: 0.75rem; color: var(--primary-700); text-transform: uppercase; font-weight: 700;">Remaining</div>
+                  <div style="font-size: 1.6rem; font-weight: 800; color: var(--primary-600); margin-top: 0.25rem;" id="leaveRemainingDisplay">20</div>
+                  <div style="font-size: 0.7rem; color: var(--primary-700);">Available</div>
+                </div>
+              </div>
+
+              <div style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.4;">
+                💡 <em>Annual, Sick, and Casual leaves deduct from your allowance once approved by the administrator. Unpaid leaves do not reduce quota.</em>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div class="card">
-          <h3>My Profile</h3>
-          <div class="profile-details">
-            <p><span class="muted">Employee ID</span><strong id="profileEmployeeId">—</strong></p>
-            <p><span class="muted">Email</span><strong id="profileEmail">—</strong></p>
-            <p><span class="muted">Department</span><strong id="profileDepartment">—</strong></p>
-            <p><span class="muted">Designation</span><strong id="profileDesignation">—</strong></p>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 1.5rem;">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">My Attendance History</h3>
+            </div>
+            <div class="card-body" style="padding: 0;">
+              <div id="empAttendanceTableContainer" class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Check In</th>
+                      <th>Check Out</th>
+                      <th>Duration</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="empAttendanceTableBody"></tbody>
+                </table>
+              </div>
+              <div id="empAttendanceEmptyState" class="empty-state" style="display: none;">
+                <div class="empty-state-icon">🕒</div>
+                <div class="empty-state-title">No attendance history yet</div>
+                <p class="empty-state-text">Your recorded clock-in and clock-out logs will be listed here.</p>
+              </div>
+            </div>
           </div>
-        </div>
 
-        <div class="card">
-          <h3>Latest Payslip</h3>
-          <p class="muted">View your salary details and payslips.</p>
-          <div class="payslip-summary">
-            <span class="muted">Monthly Salary</span>
-            <strong id="monthlySalary">Rs. 0</strong>
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">My Leave Requests</h3>
+            </div>
+            <div class="card-body" style="padding: 0;">
+              <div id="empLeavesTableContainer" class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Dates</th>
+                      <th>Type</th>
+                      <th>Days</th>
+                      <th>Status</th>
+                      <th>Admin Remarks</th>
+                    </tr>
+                  </thead>
+                  <tbody id="empLeavesTableBody"></tbody>
+                </table>
+              </div>
+              <div id="empLeavesEmptyState" class="empty-state" style="display: none;">
+                <div class="empty-state-icon">🏖️</div>
+                <div class="empty-state-title">No leave applications</div>
+                <p class="empty-state-text">You have not submitted any leave requests yet.</p>
+              </div>
+            </div>
           </div>
-          <a href="payslip.html" class="btn btn-primary">View Payslips</a>
         </div>
-      </section>
-
-      <section class="card">
-        <div class="section-heading">
-          <div>
-            <h2>My Attendance History</h2>
-            <p class="muted">Your recent attendance records.</p>
-          </div>
-        </div>
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Check In</th>
-                <th>Check Out</th>
-                <th>Work Hours</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody id="myAttendanceTable">
-              <tr>
-                <td colspan="5">Loading attendance...</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section class="card">
-        <div class="section-heading">
-          <div>
-            <h2>My Leave Requests</h2>
-            <p class="muted">Track your recent leave requests.</p>
-          </div>
-          <a href="leaves.html" class="btn btn-secondary">View All</a>
-        </div>
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>Leave Type</th>
-                <th>From</th>
-                <th>To</th>
-                <th>Days</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody id="myLeaveTable">
-              <tr>
-                <td colspan="5">Loading leave requests...</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section class="card">
-        <h2>Quick Help</h2>
-        <p class="muted">Need help? Ask about attendance, leaves, salary, or company rules.</p>
-        <div id="helperMessages" class="helper-messages"></div>
-        <form id="helperForm">
-          <div class="form-group">
-            <label for="helperInput">Your question</label>
-            <input id="helperInput" type="text" placeholder="Ask a question..." autocomplete="off">
-          </div>
-          <button class="btn btn-primary" type="submit">Ask</button>
-        </form>
-        <div id="helperQuickQuestions" class="helper-quick-questions">
-          <button type="button" class="btn btn-secondary" data-question="What is my leave balance?">Leave balance</button>
-          <button type="button" class="btn btn-secondary" data-question="Show my attendance">My attendance</button>
-          <button type="button" class="btn btn-secondary" data-question="Show my salary">My salary</button>
-        </div>
-      </section>
-    </main>
+      </main>
+    </div>
   </div>
+
+  <div class="modal-overlay" id="applyLeaveModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title">Apply for Leave</h3>
+        <button type="button" class="modal-close-btn" id="closeApplyLeaveModalBtn">&times;</button>
+      </div>
+
+      <form id="applyLeaveForm">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" for="leaveTypeSelect">Leave Type <span class="required">*</span></label>
+            <select id="leaveTypeSelect" class="form-control" required>
+              <option value="Annual">Annual Leave (Deducts from quota)</option>
+              <option value="Sick">Sick Leave (Deducts from quota)</option>
+              <option value="Casual">Casual Leave (Deducts from quota)</option>
+              <option value="Unpaid">Unpaid Leave (No quota deduction)</option>
+            </select>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label class="form-label" for="leaveStartDate">Start Date <span class="required">*</span></label>
+              <input type="date" id="leaveStartDate" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="leaveEndDate">End Date <span class="required">*</span></label>
+              <input type="date" id="leaveEndDate" class="form-control" required>
+            </div>
+          </div>
+
+          <div id="leaveDurationPreview" style="font-size: 0.85rem; font-weight: 600; color: var(--primary-600); margin-bottom: 1rem;">
+            Duration: 0 days
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="leaveReason">Reason for Leave <span class="required">*</span></label>
+            <textarea id="leaveReason" class="form-control" rows="3" placeholder="Briefly describe the purpose of your leave..." required></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="cancelApplyLeaveModalBtn">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btnSubmitLeave">Submit Application</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="../js/storage.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/attendance.js"></script>
+  <script src="../js/leave.js"></script>
+  <script src="../js/helper.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!AuthService.requireAuth('employee')) return;
+
+      const session = AuthService.getSession();
+      const company = StorageService.getCompany() || {};
+      const empId = session.employeeId;
+      const employee = StorageService.getEmployeeByEmpId(empId);
+
+      const companyDisplays = document.querySelectorAll('.company-name-display');
+      companyDisplays.forEach(el => el.textContent = company.companyName || 'Acme Corp');
+
+      if (employee) {
+        document.getElementById('empUserName').textContent = employee.fullName;
+        document.getElementById('empUserTitle').textContent = employee.jobTitle;
+        document.getElementById('empBannerName').textContent = employee.fullName;
+        document.getElementById('empBannerId').textContent = employee.employeeId;
+        document.getElementById('empBannerDept').textContent = employee.department;
+        document.getElementById('empBannerTitle').textContent = employee.jobTitle;
+
+        const initials = employee.fullName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+        document.getElementById('empAvatar').textContent = initials;
+        document.getElementById('empBigAvatar').textContent = initials;
+      }
+
+      function updateLiveClock() {
+        const now = new Date();
+        const timeStr = AttendanceModule.getCurrentLocalTime();
+        const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        const dateStr = now.toLocaleDateString(undefined, dateOptions);
+
+        const clockEl = document.getElementById('liveClockDisplay');
+        const dateEl = document.getElementById('currentLocalDateDisplay');
+        if (clockEl) clockEl.textContent = timeStr;
+        if (dateEl) dateEl.textContent = dateStr;
+      }
+      setInterval(updateLiveClock, 1000);
+      updateLiveClock();
+
+      function refreshEmployeeDashboard() {
+        const todayDate = AttendanceModule.getCurrentLocalDate();
+        const todayLog = StorageService.getEmployeeAttendanceByDate(empId, todayDate);
+
+        const btnCheckIn = document.getElementById('btnPunchCheckIn');
+        const btnCheckOut = document.getElementById('btnPunchCheckOut');
+        const badgeContainer = document.getElementById('todayStatusBadgeContainer');
+        const checkInTimeEl = document.getElementById('todayCheckInTime');
+        const checkOutTimeEl = document.getElementById('todayCheckOutTime');
+
+        if (!todayLog) {
+          btnCheckIn.disabled = false;
+          btnCheckOut.disabled = true;
+          badgeContainer.innerHTML = '<span class="badge badge-inactive"><span class="badge-dot"></span>Not Checked In</span>';
+          checkInTimeEl.textContent = '--:--:--';
+          checkOutTimeEl.textContent = '--:--:--';
+        } else if (todayLog.checkOutTime) {
+          btnCheckIn.disabled = true;
+          btnCheckOut.disabled = true;
+          const badgeClass =
+            todayLog.status === 'Present' ? 'badge-present' :
+            todayLog.status === 'Late' ? 'badge-late' : 'badge-half-day';
+          badgeContainer.innerHTML = `<span class="badge ${badgeClass}"><span class="badge-dot"></span>${todayLog.status} (Checked Out)</span>`;
+          checkInTimeEl.textContent = todayLog.checkInTime;
+          checkOutTimeEl.textContent = todayLog.checkOutTime;
+        } else {
+          btnCheckIn.disabled = true;
+          btnCheckOut.disabled = false;
+          const badgeClass =
+            todayLog.status === 'Present' ? 'badge-present' :
+            todayLog.status === 'Late' ? 'badge-late' : 'badge-half-day';
+          badgeContainer.innerHTML = `<span class="badge ${badgeClass}"><span class="badge-dot"></span>${todayLog.status} (Active)</span>`;
+          checkInTimeEl.textContent = todayLog.checkInTime;
+          checkOutTimeEl.textContent = 'Clocked in';
+        }
+
+        renderAttendanceHistory();
+        renderLeaveSection();
+      }
+
+      function renderAttendanceHistory() {
+        const tableBody = document.getElementById('empAttendanceTableBody');
+        const emptyState = document.getElementById('empAttendanceEmptyState');
+        const tableContainer = document.getElementById('empAttendanceTableContainer');
+
+        const logs = StorageService.getEmployeeAttendance(empId);
+
+        if (logs.length === 0) {
+          tableBody.innerHTML = '';
+          emptyState.style.display = 'block';
+          tableContainer.style.display = 'none';
+          return;
+        }
+
+        emptyState.style.display = 'none';
+        tableContainer.style.display = 'block';
+
+        tableBody.innerHTML = logs.map(log => {
+          const badgeClass =
+            log.status === 'Present' ? 'badge-present' :
+            log.status === 'Late' ? 'badge-late' : 'badge-half-day';
+          const duration = log.workedMinutes > 0 ? AttendanceModule.formatMinutesToHours(log.workedMinutes) : (log.checkOutTime ? '0h' : 'In progress');
+
+          return `
+            <tr>
+              <td><strong>${log.date}</strong></td>
+              <td>${log.checkInTime}</td>
+              <td>${log.checkOutTime || '<span style="color: var(--text-muted);">In progress</span>'}</td>
+              <td><strong>${duration}</strong></td>
+              <td>
+                <span class="badge ${badgeClass}">
+                  <span class="badge-dot"></span>
+                  ${log.status}
+                </span>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      function renderLeaveSection() {
+        const balance = LeaveModule.getLeaveBalance(empId);
+        document.getElementById('leaveQuotaDisplay').textContent = balance.quota;
+        document.getElementById('leaveUsedDisplay').textContent = balance.usedDays;
+        document.getElementById('leaveRemainingDisplay').textContent = balance.remaining;
+
+        const tableBody = document.getElementById('empLeavesTableBody');
+        const emptyState = document.getElementById('empLeavesEmptyState');
+        const tableContainer = document.getElementById('empLeavesTableContainer');
+
+        const myLeaves = StorageService.getEmployeeLeaves(empId);
+
+        if (myLeaves.length === 0) {
+          tableBody.innerHTML = '';
+          emptyState.style.display = 'block';
+          tableContainer.style.display = 'none';
+          return;
+        }
+
+        emptyState.style.display = 'none';
+        tableContainer.style.display = 'block';
+
+        tableBody.innerHTML = myLeaves.map(leave => {
+          const badgeClass =
+            leave.status === 'Approved' ? 'badge-approved' :
+            leave.status === 'Rejected' ? 'badge-rejected' : 'badge-pending';
+
+          return `
+            <tr>
+              <td><strong>${leave.startDate}</strong> to <strong>${leave.endDate}</strong></td>
+              <td>${leave.leaveType}</td>
+              <td><strong>${leave.daysCount} day(s)</strong></td>
+              <td>
+                <span class="badge ${badgeClass}">
+                  <span class="badge-dot"></span>
+                  ${leave.status}
+                </span>
+              </td>
+              <td>
+                <span style="font-size: 0.825rem; color: var(--text-secondary);">
+                  ${leave.adminComment || (leave.status === 'Pending' ? 'Pending administrator review' : '-')}
+                </span>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      document.getElementById('btnPunchCheckIn')?.addEventListener('click', () => {
+        const res = AttendanceModule.checkIn(empId);
+        if (res.success) {
+          window.showToast(res.message, 'success');
+          refreshEmployeeDashboard();
+        } else {
+          window.showToast(res.message, 'warning');
+        }
+      });
+
+      document.getElementById('btnPunchCheckOut')?.addEventListener('click', () => {
+        const res = AttendanceModule.checkOut(empId);
+        if (res.success) {
+          window.showToast(res.message, 'success');
+          refreshEmployeeDashboard();
+        } else {
+          window.showToast(res.message, 'warning');
+        }
+      });
+
+      const modal = document.getElementById('applyLeaveModal');
+      const openBtn = document.getElementById('btnOpenApplyLeaveModal');
+      const closeBtn = document.getElementById('closeApplyLeaveModalBtn');
+      const cancelBtn = document.getElementById('cancelApplyLeaveModalBtn');
+      const leaveForm = document.getElementById('applyLeaveForm');
+      const startDateInput = document.getElementById('leaveStartDate');
+      const endDateInput = document.getElementById('leaveEndDate');
+      const previewEl = document.getElementById('leaveDurationPreview');
+
+      const todayStr = StorageService.getLocalDate();
+      if (startDateInput) startDateInput.min = todayStr;
+      if (endDateInput) endDateInput.min = todayStr;
+
+      function updateDurationPreview() {
+        const s = startDateInput.value;
+        const e = endDateInput.value;
+        if (s && e) {
+          const days = LeaveModule.calculateDays(s, e);
+          if (days > 0) {
+            previewEl.textContent = `Duration: ${days} day(s)`;
+            previewEl.style.color = 'var(--primary-600)';
+          } else {
+            previewEl.textContent = 'Invalid date range: End date must be on or after start date.';
+            previewEl.style.color = 'var(--danger-text)';
+          }
+        }
+      }
+
+      startDateInput?.addEventListener('change', () => {
+        if (startDateInput.value) {
+          endDateInput.min = startDateInput.value;
+          if (!endDateInput.value || endDateInput.value < startDateInput.value) {
+            endDateInput.value = startDateInput.value;
+          }
+        }
+        updateDurationPreview();
+      });
+
+      endDateInput?.addEventListener('change', updateDurationPreview);
+
+      openBtn?.addEventListener('click', () => {
+        leaveForm.reset();
+        previewEl.textContent = 'Duration: 0 days';
+        modal.classList.add('active');
+      });
+
+      function closeModal() {
+        modal.classList.remove('active');
+      }
+
+      closeBtn?.addEventListener('click', closeModal);
+      cancelBtn?.addEventListener('click', closeModal);
+
+      leaveForm?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const leaveType = document.getElementById('leaveTypeSelect').value;
+        const startDate = startDateInput.value;
+        const endDate = endDateInput.value;
+        const reason = document.getElementById('leaveReason').value;
+
+        const res = LeaveModule.applyLeave({
+          employeeId: empId,
+          leaveType,
+          startDate,
+          endDate,
+          reason
+        });
+
+        if (res.success) {
+          window.showToast(res.message, 'success');
+          closeModal();
+          refreshEmployeeDashboard();
+        } else {
+          window.showToast(res.message, 'error');
+        }
+      });
+
+      const mobileBtn = document.getElementById('mobileMenuBtn');
+      const sidebarCloseBtn = document.getElementById('sidebarCloseBtn');
+      const sidebar = document.getElementById('appSidebar');
+
+      mobileBtn?.addEventListener('click', () => sidebar.classList.add('open'));
+      sidebarCloseBtn?.addEventListener('click', () => sidebar.classList.remove('open'));
+
+      refreshEmployeeDashboard();
+    });
+  </script>
 </body>
 </html>

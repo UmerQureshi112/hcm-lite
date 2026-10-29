@@ -1,430 +1,367 @@
+/**
+ * HCM Lite - Employee Management Module (js/employees.js)
+ * Handles CRUD operations, search, filters, validation, and auto-provisioning employee login accounts.
+ */
 
-document.addEventListener("DOMContentLoaded", () => {
-  const form = document.getElementById("employeeForm");
-  const tableBody = document.getElementById("employeesTableBody");
+const EmployeeModule = {
+  editingEmployeeId: null,
 
-  // Sirf Employees page par chalao
-  if (!form || !tableBody) return;
+  init() {
+    this.updateDepartmentFilterOptions();
+    this.renderEmployeeList();
+    this.setupForm();
+    this.setupFiltersAndSearch();
+  },
 
-  const idInput = document.getElementById("employeeId");
-  const nameInput = document.getElementById("employeeFullName");
-  const emailInput = document.getElementById("employeeEmail");
-  const departmentInput = document.getElementById("employeeDepartment");
-  const designationInput = document.getElementById("employeeDesignation");
-  const salaryInput = document.getElementById("employeeSalary");
-  const joinDateInput = document.getElementById("employeeJoinDate");
-  const statusInput = document.getElementById("employeeStatus");
-  const passwordInput = document.getElementById("employeePassword");
+  renderEmployeeList() {
+    const tableBody = document.getElementById('employeeTableBody');
+    const emptyState = document.getElementById('employeeEmptyState');
+    const tableContainer = document.getElementById('employeeTableContainer');
 
-  const errorEl = document.getElementById("employeeFormError");
-  const saveBtn = form.querySelector('[type="submit"]');
-  const addBtn = document.getElementById("addEmployeeBtn");
-  const cancelBtn = document.getElementById("cancelEmployeeBtn");
-  const formTitle = document.getElementById("employeeFormTitle");
-  const formContainer = document.getElementById("employeeFormContainer");
-  const searchInput = document.getElementById("employeeSearch");
+    if (!tableBody) return;
 
-  let employees = getEmployees();
+    const employees = StorageService.getEmployees();
+    const searchQuery = (document.getElementById('searchEmployee')?.value || '').toLowerCase().trim();
+    const deptFilter = document.getElementById('filterDepartment')?.value || 'all';
+    const statusFilter = document.getElementById('filterStatus')?.value || 'all';
 
-  function showError(message = "") {
-    if (errorEl) errorEl.textContent = message;
-  }
+    const filtered = employees.filter(emp => {
+      if (!emp) return false;
+      const matchSearch =
+        (emp.fullName || '').toLowerCase().includes(searchQuery) ||
+        (emp.email || '').toLowerCase().includes(searchQuery) ||
+        (emp.employeeId || '').toLowerCase().includes(searchQuery) ||
+        (emp.jobTitle || '').toLowerCase().includes(searchQuery);
 
-  function validEmail(email) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  }
+      const matchDept = deptFilter === 'all' || emp.department === deptFilter;
+      const matchStatus = statusFilter === 'all' || emp.status === statusFilter;
 
-  function escapeText(value) {
-    return String(value ?? "");
-  }
-
-  // DOM element ko text mein convert karne ke bajaye append karo
-  function createCell(value) {
-    const cell = document.createElement("td");
-
-    if (value instanceof Node) {
-      cell.appendChild(value);
-    } else {
-      cell.textContent = escapeText(value);
-    }
-
-    return cell;
-  }
-
-  function createBadge(value) {
-    const badge = document.createElement("span");
-    const status = value || "Active";
-
-    badge.className =
-      status === "Active"
-        ? "badge badge-success"
-        : status === "Inactive"
-          ? "badge badge-danger"
-          : "badge badge-info";
-
-    badge.textContent = status;
-    return badge;
-  }
-
-  function createEmployeeCell(employee) {
-    const wrapper = document.createElement("div");
-    wrapper.className = "emp-cell";
-
-    const avatar = document.createElement("span");
-    avatar.className = "avatar avatar-sm";
-    avatar.textContent = getInitials(employee.name || "");
-
-    const info = document.createElement("div");
-
-    const name = document.createElement("strong");
-    name.textContent = employee.name || "Unnamed Employee";
-
-    const email = document.createElement("small");
-    email.textContent = employee.email || "";
-
-    info.append(name, email);
-    wrapper.append(avatar, info);
-
-    return wrapper;
-  }
-
-  function createActions(employee) {
-    const wrapper = document.createElement("div");
-    wrapper.className = "row-actions";
-
-    const editBtn = document.createElement("button");
-    editBtn.type = "button";
-    editBtn.className = "btn btn-secondary btn-sm";
-    editBtn.textContent = "Edit";
-    editBtn.addEventListener("click", () => startEdit(employee));
-
-    const deleteBtn = document.createElement("button");
-    deleteBtn.type = "button";
-    deleteBtn.className = "btn btn-danger btn-sm";
-    deleteBtn.textContent = "Delete";
-    deleteBtn.addEventListener("click", () => deleteEmployee(employee));
-
-    wrapper.append(editBtn, deleteBtn);
-    return wrapper;
-  }
-
-  function renderEmployees() {
-    employees = getEmployees();
-
-    const searchText = searchInput
-      ? searchInput.value.trim().toLowerCase()
-      : "";
-
-    const filtered = employees.filter((employee) => {
-      const name = String(employee.name || "").toLowerCase();
-      const email = String(employee.email || "").toLowerCase();
-      const department = String(employee.department || "").toLowerCase();
-      const designation = String(employee.designation || "").toLowerCase();
-
-      return (
-        name.includes(searchText) ||
-        email.includes(searchText) ||
-        department.includes(searchText) ||
-        designation.includes(searchText)
-      );
+      return matchSearch && matchDept && matchStatus;
     });
-
-    tableBody.innerHTML = "";
 
     if (filtered.length === 0) {
-      const row = document.createElement("tr");
-      row.className = "empty-row";
-
-      const cell = createCell(
-        employees.length === 0
-          ? "No employees yet. Add your first employee."
-          : "No employees match your search."
-      );
-
-      // HTML table mein total 8 columns hain
-      cell.colSpan = 8;
-
-      row.appendChild(cell);
-      tableBody.appendChild(row);
+      tableBody.innerHTML = '';
+      if (emptyState) emptyState.style.display = 'block';
+      if (tableContainer) tableContainer.style.display = 'none';
       return;
     }
 
-    filtered.forEach((employee) => {
-      const row = document.createElement("tr");
+    if (emptyState) emptyState.style.display = 'none';
+    if (tableContainer) tableContainer.style.display = 'block';
 
-      const joined = employee.joinDate || employee.createdAt;
-      let joinedText = "-";
+    const company = StorageService.getCompany() || {};
+    const currency = company.currency || '$';
 
-      if (joined) {
-        joinedText = formatDate(String(joined).slice(0, 10));
-      }
+    tableBody.innerHTML = filtered.map(emp => {
+      const statusBadgeClass =
+        emp.status === 'Active' ? 'badge-active' :
+        emp.status === 'On Leave' ? 'badge-on-leave' : 'badge-inactive';
 
-      // HTML ke mutabiq 8 separate columns
-      row.append(
-        createCell(createEmployeeCell(employee)),
-        createCell(employee.email || "-"),
-        createCell(employee.department || "-"),
-        createCell(employee.designation || "-"),
-        createCell(formatCurrency(Number(employee.salary || 0))),
-        createCell(joinedText),
-        createCell(createBadge(employee.status || "Active")),
-        createCell(createActions(employee))
-      );
+      return `
+        <tr>
+          <td><strong class="font-mono">${this.escapeHtml(emp.employeeId)}</strong></td>
+          <td>
+            <div style="font-weight: 600; color: var(--text-primary);">${this.escapeHtml(emp.fullName)}</div>
+            <div style="font-size: 0.8rem; color: var(--text-muted);">${this.escapeHtml(emp.email)}</div>
+          </td>
+          <td>${this.escapeHtml(emp.department)}</td>
+          <td>${this.escapeHtml(emp.jobTitle)}</td>
+          <td>${emp.joiningDate || '-'}</td>
+          <td><strong>${currency}${parseFloat(emp.monthlySalary || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
+          <td>${emp.leaveQuota} days</td>
+          <td>
+            <span class="badge ${statusBadgeClass}">
+              <span class="badge-dot"></span>
+              ${this.escapeHtml(emp.status)}
+            </span>
+          </td>
+          <td>
+            <div style="display: flex; gap: 0.4rem;">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="EmployeeModule.openEditModal('${emp.id}')" title="Edit Employee">
+                ✏️ Edit
+              </button>
+              <button type="button" class="btn btn-danger btn-sm" onclick="EmployeeModule.confirmDelete('${emp.id}')" title="Delete Employee">
+                🗑️
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  },
 
-      tableBody.appendChild(row);
-    });
-  }
+  updateDepartmentFilterOptions() {
+    const filterSelect = document.getElementById('filterDepartment');
+    if (!filterSelect) return;
 
-  function openForm() {
-    if (formContainer) formContainer.hidden = false;
-    if (nameInput) nameInput.focus();
-  }
+    const currentSelection = filterSelect.value;
+    const employees = StorageService.getEmployees();
+    const departments = [...new Set(employees.map(e => e.department).filter(Boolean))].sort();
 
-  function stopEdit() {
-    form.reset();
-
-    if (idInput) idInput.value = "";
-
-    if (passwordInput) {
-      passwordInput.value = "";
-      passwordInput.placeholder = "At least 6 characters";
-    }
-
-    if (formTitle) formTitle.textContent = "Add New Employee";
-    if (saveBtn) saveBtn.textContent = "Add Employee";
-    if (cancelBtn) cancelBtn.hidden = true;
-    if (formContainer) formContainer.hidden = true;
-
-    showError("");
-  }
-
-  function startEdit(employee) {
-    openForm();
-
-    idInput.value = employee.id;
-    nameInput.value = employee.name || "";
-    emailInput.value = employee.email || "";
-    departmentInput.value = employee.department || "";
-    designationInput.value = employee.designation || "";
-    salaryInput.value = employee.salary ?? "";
-    joinDateInput.value = employee.joinDate || "";
-    statusInput.value = employee.status || "Active";
-
-    if (passwordInput) {
-      passwordInput.value = "";
-      passwordInput.placeholder = "Leave blank to keep current password";
-    }
-
-    if (formTitle) formTitle.textContent = "Edit Employee";
-    if (saveBtn) saveBtn.textContent = "Update Employee";
-    if (cancelBtn) cancelBtn.hidden = false;
-
-    showError("");
-  }
-
-  function syncEmployeeName(id, name) {
-    const attendance = getAttendance();
-    const leaves = getLeaves();
-
-    attendance.forEach((record) => {
-      if (String(record.employeeId) === String(id)) {
-        record.employeeName = name;
-      }
+    let optionsHtml = '<option value="all">All Departments</option>';
+    departments.forEach(dept => {
+      optionsHtml += `<option value="${this.escapeHtml(dept)}">${this.escapeHtml(dept)}</option>`;
     });
 
-    leaves.forEach((leave) => {
-      if (String(leave.employeeId) === String(id)) {
-        leave.employeeName = name;
-      }
-    });
-
-    saveData(STORAGE_KEYS.attendance, attendance);
-    saveData(STORAGE_KEYS.leaves, leaves);
-  }
-
-  function deleteEmployee(employee) {
-    const confirmed = confirm(
-      `Delete ${employee.name}?\n\nTheir attendance and leave records will also be removed.`
-    );
-
-    if (!confirmed) return;
-
-    const id = String(employee.id);
-
-    const updatedEmployees = employees.filter(
-      (item) => String(item.id) !== id
-    );
-
-    const updatedAttendance = getAttendance().filter(
-      (record) => String(record.employeeId) !== id
-    );
-
-    const updatedLeaves = getLeaves().filter(
-      (leave) => String(leave.employeeId) !== id
-    );
-
-    if (!saveData(STORAGE_KEYS.employees, updatedEmployees)) {
-      showError("Could not delete employee. Please try again.");
-      return;
-    }
-
-    saveData(STORAGE_KEYS.attendance, updatedAttendance);
-    saveData(STORAGE_KEYS.leaves, updatedLeaves);
-
-    employees = updatedEmployees;
-
-    if (idInput && String(idInput.value) === id) {
-      stopEdit();
-    }
-
-    renderEmployees();
-
-    if (typeof showToast === "function") {
-      showToast("Employee deleted", "success");
-    }
-  }
-
-  form.addEventListener("submit", (event) => {
-    event.preventDefault();
-    showError("");
-
-    const editingId = idInput.value;
-    const name = nameInput.value.trim();
-    const email = emailInput.value.trim().toLowerCase();
-    const department = departmentInput.value.trim();
-    const designation = designationInput.value.trim();
-    const salary = Number(salaryInput.value);
-    const joinDate = joinDateInput.value;
-    const status = statusInput.value;
-    const password = passwordInput ? passwordInput.value : "";
-
-    if (!name || !email || !department || !designation) {
-      showError("Please fill in all required fields.");
-      return;
-    }
-
-    if (!validEmail(email)) {
-      showError("Please enter a valid email address.");
-      return;
-    }
-
-    if (!editingId && !password.trim()) {
-      showError("Please enter a login password for the employee.");
-      return;
-    }
-
-    if (password && password.length < 6) {
-      showError("Password must be at least 6 characters.");
-      return;
-    }
-
-    if (!Number.isFinite(salary) || salary <= 0) {
-      showError("Please enter a valid salary greater than 0.");
-      return;
-    }
-
-    const admin = getData(STORAGE_KEYS.admin, null);
-    const adminEmail = String(admin?.email || "").toLowerCase();
-
-    const duplicate =
-      email === adminEmail ||
-      employees.some(
-        (item) =>
-          String(item.email || "").toLowerCase() === email &&
-          String(item.id) !== String(editingId)
-      );
-
-    if (duplicate) {
-      showError("This email is already registered.");
-      return;
-    }
-
-    let updatedEmployees;
-
-    if (editingId) {
-      updatedEmployees = employees.map((employee) => {
-        if (String(employee.id) !== String(editingId)) {
-          return employee;
-        }
-
-        return {
-          ...employee,
-          name,
-          email,
-          department,
-          designation,
-          salary,
-          joinDate,
-          status,
-          password: password || employee.password
-        };
-      });
+    filterSelect.innerHTML = optionsHtml;
+    if (departments.includes(currentSelection)) {
+      filterSelect.value = currentSelection;
     } else {
-      updatedEmployees = [
-        ...employees,
-        {
-          id: generateId(),
-          name,
-          email,
-          department,
-          designation,
-          salary,
-          joinDate: joinDate || new Date().toISOString().slice(0, 10),
-          status: status || "Active",
-          password,
-          createdAt: new Date().toISOString()
-        }
-      ];
+      filterSelect.value = 'all';
+    }
+  },
+
+  setupFiltersAndSearch() {
+    const searchInput = document.getElementById('searchEmployee');
+    const deptFilter = document.getElementById('filterDepartment');
+    const statusFilter = document.getElementById('filterStatus');
+
+    searchInput?.addEventListener('input', () => this.renderEmployeeList());
+    deptFilter?.addEventListener('change', () => this.renderEmployeeList());
+    statusFilter?.addEventListener('change', () => this.renderEmployeeList());
+  },
+
+  setupForm() {
+    const form = document.getElementById('employeeModalForm');
+    const addBtn = document.getElementById('openAddEmployeeModalBtn');
+    const closeBtn = document.getElementById('closeEmployeeModalBtn');
+    const cancelBtn = document.getElementById('cancelEmployeeModalBtn');
+
+    addBtn?.addEventListener('click', () => this.openAddModal());
+    closeBtn?.addEventListener('click', () => this.closeModal());
+    cancelBtn?.addEventListener('click', () => this.closeModal());
+
+    form?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      this.handleFormSubmit();
+    });
+  },
+
+  openAddModal() {
+    this.editingEmployeeId = null;
+    const modal = document.getElementById('employeeModal');
+    const title = document.getElementById('employeeModalTitle');
+    const form = document.getElementById('employeeModalForm');
+    const passwordHelp = document.getElementById('employeePasswordHelp');
+    const idInput = document.getElementById('empCustomId');
+
+    if (form) form.reset();
+    if (title) title.textContent = 'Add New Employee';
+    if (passwordHelp) passwordHelp.textContent = 'This will be the employee’s initial login password.';
+
+    if (idInput) {
+      idInput.value = StorageService.generateEmployeeId();
     }
 
-    const saved = saveData(STORAGE_KEYS.employees, updatedEmployees);
+    const company = StorageService.getCompany() || {};
+    const quotaInput = document.getElementById('empLeaveQuota');
+    if (quotaInput) {
+      quotaInput.value = company.defaultLeaveQuota || 20;
+    }
 
-    if (saved === false) {
-      showError("Could not save employee data. Please try again.");
+    const joinDateInput = document.getElementById('empJoiningDate');
+    if (joinDateInput) {
+      joinDateInput.value = StorageService.getLocalDate();
+    }
+
+    const passwordInput = document.getElementById('empPassword');
+    if (passwordInput) {
+      passwordInput.required = true;
+    }
+
+    modal?.classList.add('active');
+  },
+
+  openEditModal(id) {
+    const employee = StorageService.getEmployeeById(id);
+    if (!employee) {
+      window.showToast('Employee not found.', 'error');
       return;
     }
 
-    employees = updatedEmployees;
+    this.editingEmployeeId = id;
+    const modal = document.getElementById('employeeModal');
+    const title = document.getElementById('employeeModalTitle');
+    const passwordHelp = document.getElementById('employeePasswordHelp');
 
-    if (editingId) {
-      syncEmployeeName(editingId, name);
+    if (title) title.textContent = `Edit Employee: ${employee.fullName}`;
+    if (passwordHelp) passwordHelp.textContent = 'Leave password blank to keep current login password.';
+
+    document.getElementById('empCustomId').value = employee.employeeId;
+    document.getElementById('empFullName').value = employee.fullName;
+    document.getElementById('empEmail').value = employee.email;
+    document.getElementById('empDepartment').value = employee.department;
+    document.getElementById('empJobTitle').value = employee.jobTitle;
+    document.getElementById('empJoiningDate').value = employee.joiningDate;
+    document.getElementById('empSalary').value = employee.monthlySalary;
+    document.getElementById('empLeaveQuota').value = employee.leaveQuota;
+    document.getElementById('empStatus').value = employee.status;
+
+    const passwordInput = document.getElementById('empPassword');
+    if (passwordInput) {
+      passwordInput.value = '';
+      passwordInput.required = false;
     }
 
-    stopEdit();
-    renderEmployees();
+    modal?.classList.add('active');
+  },
 
-    if (typeof showToast === "function") {
-      showToast(
-        editingId ? "Employee updated" : "Employee added",
-        "success"
-      );
+  closeModal() {
+    const modal = document.getElementById('employeeModal');
+    modal?.classList.remove('active');
+    this.editingEmployeeId = null;
+  },
+
+  handleFormSubmit() {
+    const employeeId = document.getElementById('empCustomId').value.trim().toUpperCase();
+    const fullName = document.getElementById('empFullName').value.trim();
+    const email = document.getElementById('empEmail').value.trim().toLowerCase();
+    const password = document.getElementById('empPassword').value;
+    const department = document.getElementById('empDepartment').value.trim();
+    const jobTitle = document.getElementById('empJobTitle').value.trim();
+    const joiningDate = document.getElementById('empJoiningDate').value;
+    const monthlySalary = parseFloat(document.getElementById('empSalary').value);
+    const leaveQuota = parseInt(document.getElementById('empLeaveQuota').value, 10);
+    const status = document.getElementById('empStatus').value;
+
+    if (!employeeId || !fullName || !email || !department || !jobTitle || !joiningDate) {
+      window.showToast('Please fill out all required fields.', 'error');
+      return;
     }
-  });
 
-  if (addBtn) {
-    addBtn.addEventListener("click", () => {
-      stopEdit();
-      openForm();
-    });
-  }
-
-  if (cancelBtn) {
-    cancelBtn.addEventListener("click", stopEdit);
-  }
-
-  if (searchInput) {
-    searchInput.addEventListener("input", renderEmployees);
-  }
-
-  form.addEventListener("input", () => showError(""));
-
-  window.addEventListener("storage", (event) => {
-    if (event.key === STORAGE_KEYS.employees) {
-      employees = getEmployees();
-      renderEmployees();
+    if (isNaN(monthlySalary) || monthlySalary < 0) {
+      window.showToast('Please enter a valid monthly salary.', 'error');
+      return;
     }
-  });
 
-  stopEdit();
-  renderEmployees();
-});
+    if (isNaN(leaveQuota) || leaveQuota < 0) {
+      window.showToast('Please enter a valid leave quota.', 'error');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      window.showToast('Please enter a valid email address.', 'error');
+      return;
+    }
+
+    const allEmployees = StorageService.getEmployees();
+    const allUsers = StorageService.getUsers();
+
+    if (this.editingEmployeeId) {
+      const existing = StorageService.getEmployeeById(this.editingEmployeeId);
+      if (!existing) return;
+
+      if (employeeId !== existing.employeeId) {
+        if (allEmployees.some(e => e && e.employeeId === employeeId && e.id !== existing.id)) {
+          window.showToast(`Employee ID ${employeeId} is already in use.`, 'error');
+          return;
+        }
+      }
+
+      if (email !== existing.email) {
+        if (allEmployees.some(e => e && e.email === email && e.id !== existing.id) ||
+            allUsers.some(u => u && u.email === email && u.employeeId !== existing.employeeId)) {
+          window.showToast(`Email ${email} is already in use by another account.`, 'error');
+          return;
+        }
+      }
+
+      StorageService.updateEmployee(existing.id, {
+        employeeId,
+        fullName,
+        email,
+        department,
+        jobTitle,
+        joiningDate,
+        monthlySalary,
+        leaveQuota,
+        status
+      });
+
+      const user = StorageService.getUserByEmployeeId(existing.employeeId);
+      if (user) {
+        const userUpdates = {
+          fullName,
+          email,
+          employeeId
+        };
+        if (password && password.trim() !== '') {
+          userUpdates.password = password;
+        }
+        StorageService.updateUser(user.id, userUpdates);
+      }
+
+      window.showToast(`Employee ${fullName} updated successfully.`, 'success');
+    } else {
+      if (!password || password.length < 4) {
+        window.showToast('Password must be at least 4 characters long.', 'error');
+        return;
+      }
+
+      if (allEmployees.some(e => e && e.employeeId === employeeId)) {
+        window.showToast(`Employee ID ${employeeId} already exists.`, 'error');
+        return;
+      }
+
+      if (allEmployees.some(e => e && e.email === email) || allUsers.some(u => u && u.email === email)) {
+        window.showToast(`Email ${email} is already registered.`, 'error');
+        return;
+      }
+
+      const newEmp = StorageService.addEmployee({
+        employeeId,
+        fullName,
+        email,
+        department,
+        jobTitle,
+        joiningDate,
+        monthlySalary,
+        leaveQuota,
+        status
+      });
+
+      StorageService.addUser({
+        fullName,
+        email,
+        password,
+        role: 'employee',
+        employeeId: newEmp.employeeId
+      });
+
+      window.showToast(`Employee ${fullName} registered with login credentials.`, 'success');
+    }
+
+    this.closeModal();
+    this.updateDepartmentFilterOptions();
+    this.renderEmployeeList();
+  },
+
+  confirmDelete(id) {
+    const employee = StorageService.getEmployeeById(id);
+    if (!employee) return;
+
+    const confirmed = confirm(
+      `Are you sure you want to delete ${employee.fullName} (${employee.employeeId})?\n\nThis will permanently delete their login account, attendance logs, and leave requests.`
+    );
+
+    if (confirmed) {
+      StorageService.deleteEmployee(id);
+      window.showToast(`Employee ${employee.fullName} deleted.`, 'info');
+      this.updateDepartmentFilterOptions();
+      this.renderEmployeeList();
+    }
+  },
+
+  escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+};
+
+window.EmployeeModule = EmployeeModule;

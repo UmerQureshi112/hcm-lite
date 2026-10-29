@@ -3,161 +3,202 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#09122c">
-  <meta name="description" content="HCM Lite - Human Capital Management, employee attendance, leave management and payroll.">
-
-  <title>HCM Lite | Login</title>
-
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
+  <title>HCM Lite - Login & First-Run Setup</title>
   <link rel="stylesheet" href="css/style.css">
-
-  <!-- Storage must load before authentication -->
-  <script src="js/storage.js"></script>
-  <script src="js/theme.js" defer></script>
-  <script src="js/auth.js"></script>
 </head>
-
 <body>
-  <main class="auth-layout">
-    <section class="auth-card card">
+  <div class="auth-page-wrapper">
+    <div class="auth-card">
+      <!-- Brand Logo & Header -->
       <div class="auth-brand">
-        <div class="brand-icon" aria-hidden="true">H</div>
-        <div>
-          <h1>HCM Lite</h1>
-          <p class="muted">Human Capital Management</p>
+        <div class="brand-icon">⚡</div>
+        <h1 id="authBrandTitle">HCM Lite</h1>
+        <p id="authBrandSubtitle">Human Capital Management Portal</p>
+      </div>
+
+      <!-- Notification / Error Box -->
+      <div id="authAlert" style="display: none; padding: 0.75rem 1rem; border-radius: var(--radius-md); font-size: 0.85rem; margin-bottom: 1.25rem;"></div>
+
+      <!-- ====================================================================
+           1. FIRST-RUN SETUP FORM (Shown only on fresh install)
+           ==================================================================== -->
+      <div id="firstRunSetupContainer" style="display: none;">
+        <div class="role-switcher-banner">
+          👋 <strong>Welcome to HCM Lite!</strong> No company profile was detected. Please complete the initial one-time configuration below to register your company and create your root Administrator account.
         </div>
-      </div>
 
-      <div class="auth-heading">
-        <h2>Welcome to HCM Lite</h2>
-        <p class="muted">Manage your workforce in one place.</p>
-      </div>
-
-      <!-- First-time company and admin setup -->
-      <section id="setupSection" hidden>
-        <h3>Set up your company</h3>
-        <p class="muted">Create your company and administrator account to get started.</p>
-
-        <form id="setupForm">
+        <form id="firstRunForm">
           <div class="form-group">
-            <label for="companyName">Company name</label>
-            <input
-              type="text"
-              id="companyName"
-              name="companyName"
-              placeholder="Enter company name"
-              autocomplete="organization"
-              required
-            >
+            <label class="form-label" for="setupCompanyName">Company Name <span class="required">*</span></label>
+            <input type="text" id="setupCompanyName" class="form-control" placeholder="e.g. Acme Corporation" required>
           </div>
 
           <div class="form-group">
-            <label for="adminName">Administrator name</label>
-            <input
-              type="text"
-              id="adminName"
-              name="adminName"
-              placeholder="Enter your full name"
-              autocomplete="name"
-              required
-            >
+            <label class="form-label" for="setupAdminName">Admin Full Name <span class="required">*</span></label>
+            <input type="text" id="setupAdminName" class="form-control" placeholder="e.g. Eleanor Vance" required>
           </div>
 
           <div class="form-group">
-            <label for="adminEmail">Administrator email</label>
-            <input
-              type="email"
-              id="adminEmail"
-              name="adminEmail"
-              placeholder="admin@example.com"
-              autocomplete="email"
-              required
-            >
+            <label class="form-label" for="setupAdminEmail">Admin Email Address <span class="required">*</span></label>
+            <input type="email" id="setupAdminEmail" class="form-control" placeholder="admin@acme.corp" required>
           </div>
 
-          <div class="form-group">
-            <label for="adminPassword">Password</label>
-            <input
-              type="password"
-              id="adminPassword"
-              name="adminPassword"
-              placeholder="At least 6 characters"
-              minlength="6"
-              autocomplete="new-password"
-              required
-            >
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label class="form-label" for="setupAdminPassword">Password <span class="required">*</span></label>
+              <input type="password" id="setupAdminPassword" class="form-control" placeholder="Min 4 characters" minlength="4" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="setupConfirmPassword">Confirm Password <span class="required">*</span></label>
+              <input type="password" id="setupConfirmPassword" class="form-control" placeholder="Re-enter password" minlength="4" required>
+            </div>
           </div>
 
-          <p id="setupError" class="form-error" role="alert" aria-live="polite"></p>
-
-          <button type="submit" class="btn btn-primary btn-block">
-            Create Company &amp; Admin
+          <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;" id="btnCompleteSetup">
+            Initialize HCM & Launch Dashboard &rarr;
           </button>
         </form>
-      </section>
+      </div>
 
-      <!-- Login after initial setup -->
-      <section id="loginSection" hidden>
-        <h3>Sign in to your account</h3>
-        <p class="muted">Enter your credentials to continue.</p>
+      <!-- ====================================================================
+           2. NORMAL LOGIN FORM (Shown after initial setup)
+           ==================================================================== -->
+      <div id="loginFormContainer" style="display: none;">
+        <div class="role-switcher-banner" id="loginGreetingBanner">
+          Sign in with your registered account credentials. Admin and Employee accounts are routed automatically to their authorized dashboards.
+        </div>
 
         <form id="loginForm">
           <div class="form-group">
-            <label for="email">Email address</label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              placeholder="Enter your email"
-              autocomplete="username"
-              required
-            >
+            <label class="form-label" for="loginEmail">Email Address <span class="required">*</span></label>
+            <input type="email" id="loginEmail" class="form-control" placeholder="name@company.com" required autocomplete="email">
           </div>
 
           <div class="form-group">
-            <label for="password">Password</label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              placeholder="Enter your password"
-              autocomplete="current-password"
-              required
-            >
+            <label class="form-label" for="loginPassword">Password <span class="required">*</span></label>
+            <input type="password" id="loginPassword" class="form-control" placeholder="Enter your password" required autocomplete="current-password">
           </div>
 
-          <p id="loginError" class="form-error" role="alert" aria-live="polite"></p>
-
-          <button type="submit" class="btn btn-primary btn-block">
-            Sign In
+          <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;" id="btnLogin">
+            Sign In to HCM Lite &rarr;
           </button>
         </form>
-      </section>
+      </div>
 
-      <footer class="auth-footer">
-        <p class="muted">HCM Lite · Employee Management System</p>
-      </footer>
-    </section>
-  </main>
+      <!-- Footer Utilities: Theme Toggle & Info -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.75rem; padding-top: 1.25rem; border-top: 1px solid var(--border-color);">
+        <button type="button" class="btn btn-outline btn-sm theme-toggle-btn">
+          <span class="icon">🌙</span> <span class="theme-text">Dark Mode</span>
+        </button>
+        <span style="font-size: 0.75rem; color: var(--text-muted);">
+          Client-Side Educational HRMS
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Shared Scripts -->
+  <script src="js/storage.js"></script>
+  <script src="js/auth.js"></script>
 
   <script>
-  document.addEventListener("DOMContentLoaded", function () {
-    const setup = document.getElementById("setupSection");
-    const login = document.getElementById("loginSection");
+    document.addEventListener('DOMContentLoaded', () => {
+      const alertBox = document.getElementById('authAlert');
+      const setupContainer = document.getElementById('firstRunSetupContainer');
+      const loginContainer = document.getElementById('loginFormContainer');
+      const brandSubtitle = document.getElementById('authBrandSubtitle');
 
-    const admin = localStorage.getItem("hcm_admin");
+      function showAlert(msg, isError = true) {
+        alertBox.style.display = 'block';
+        alertBox.style.backgroundColor = isError ? 'var(--danger-bg)' : 'var(--success-bg)';
+        alertBox.style.color = isError ? 'var(--danger-text)' : 'var(--success-text)';
+        alertBox.style.border = `1px solid ${isError ? 'var(--danger-border)' : 'var(--success-border)'}`;
+        alertBox.textContent = msg;
+      }
 
-    if (admin) {
-      login.hidden = false;
-      setup.hidden = true;
-    } else {
-      setup.hidden = false;
-      login.hidden = true;
-    }
-  });
-</script>
+      function hideAlert() {
+        alertBox.style.display = 'none';
+      }
+
+      // Check if setup is needed
+      if (AuthService.needsFirstRun()) {
+        StorageService.clearSession(); // Clear any stale session
+        setupContainer.style.display = 'block';
+        loginContainer.style.display = 'none';
+        brandSubtitle.textContent = 'Initial System Setup';
+      } else {
+        // Setup is complete: check if already logged in -> forward to role dashboard
+        if (AuthService.isLoggedIn()) {
+          const session = AuthService.getSession();
+          if (session.role === 'admin') {
+            window.location.href = 'pages/admin.html';
+            return;
+          } else if (session.role === 'employee') {
+            window.location.href = 'pages/employee.html';
+            return;
+          }
+        }
+
+        setupContainer.style.display = 'none';
+        loginContainer.style.display = 'block';
+        const company = StorageService.getCompany();
+        if (company && company.companyName) {
+          brandSubtitle.textContent = `${company.companyName} Portal`;
+        }
+      }
+
+      // Handle First-Run Setup Submission
+      document.getElementById('firstRunForm')?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        hideAlert();
+
+        const companyName = document.getElementById('setupCompanyName').value;
+        const adminName = document.getElementById('setupAdminName').value;
+        const adminEmail = document.getElementById('setupAdminEmail').value;
+        const adminPassword = document.getElementById('setupAdminPassword').value;
+        const confirmPassword = document.getElementById('setupConfirmPassword').value;
+
+        const result = AuthService.setupFirstRun({
+          companyName,
+          adminName,
+          adminEmail,
+          adminPassword,
+          confirmPassword
+        });
+
+        if (result.success) {
+          showAlert('First-run setup completed! Redirecting to Admin Dashboard...', false);
+          setTimeout(() => {
+            window.location.href = 'pages/admin.html';
+          }, 800);
+        } else {
+          showAlert(result.message, true);
+        }
+      });
+
+      // Handle Normal Login Submission
+      document.getElementById('loginForm')?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        hideAlert();
+
+        const email = document.getElementById('loginEmail').value;
+        const password = document.getElementById('loginPassword').value;
+
+        const result = AuthService.login(email, password);
+        if (result.success) {
+          showAlert(`Welcome back, ${result.user.fullName}! Redirecting...`, false);
+          setTimeout(() => {
+            if (result.user.role === 'admin') {
+              window.location.href = 'pages/admin.html';
+            } else {
+              window.location.href = 'pages/employee.html';
+            }
+          }, 600);
+        } else {
+          showAlert(result.message, true);
+        }
+      });
+    });
+  </script>
 </body>
 </html>

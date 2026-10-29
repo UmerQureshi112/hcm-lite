@@ -1,192 +1,396 @@
-
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#09122c">
-  <title>HCM Lite | Admin Dashboard</title>
-
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
-  <link rel="stylesheet" href="../css/style.css">
-  <link rel="stylesheet" href="../css/admin.css">
-
-  <script src="../js/storage.js"></script>
-  <script src="../js/theme.js" defer></script>
-  <script src="../js/auth.js" data-role="admin"></script>
-  <script src="../js/attendance.js" defer></script>
-  <script src="../js/leave.js" defer></script>
-  <script src="../js/helper.js" defer></script>
-</head>
-
-<body>
-  <div class="app-layout">
-    <aside class="sidebar">
-      <a class="brand" href="admin.html">
-        <span class="brand-icon">H</span>
-        <span>HCM Lite</span>
-      </a>
-
-      <nav class="sidebar-nav" aria-label="Main navigation">
-        <a class="nav-link active" href="admin.html">Dashboard</a>
-        <a class="nav-link" href="employees.html">Employees</a>
-        <a class="nav-link" href="leaves.html">Leave Management</a>
-        <a class="nav-link" href="payslip.html">Payslips</a>
-        <a class="nav-link" href="settings.html">Settings</a>
-      </nav>
-
-      <div class="sidebar-user">
-        <span class="avatar" data-user-initials>AD</span>
-        <div>
-          <strong data-user-name>Administrator</strong>
-          <small data-user-role>Administrator</small>
-        </div>
-      </div>
-
-      <button type="button" class="btn btn-secondary btn-block" id="logoutBtn">
-        Log out
-      </button>
-    </aside>
-
-    <main class="main-content">
-      <header class="page-header">
-        <div>
-          <p class="eyebrow" data-company-name>HCM Lite</p>
-          <h1>Admin Dashboard</h1>
-          <p class="muted">Welcome back. Here's your workforce overview.</p>
-        </div>
-        <div class="header-actions">
-          <span class="badge badge-info" data-user-role>Administrator</span>
-        </div>
-      </header>
-
-      <section class="hero-card card">
-        <div>
-          <p class="eyebrow">WORKFORCE OVERVIEW</p>
-          <h2>Manage your team with confidence</h2>
-          <p>Monitor attendance, review leave requests and manage employee records.</p>
-        </div>
-        <div class="hero-actions">
-          <a href="employees.html" class="btn btn-primary">Manage Employees</a>
-          <a href="leaves.html" class="btn btn-secondary">Review Leaves</a>
-        </div>
-      </section>
-
-      <section class="stats-grid" aria-label="Workforce statistics">
-        <article class="stat-card card">
-          <span class="stat-label">Total Employees</span>
-          <strong class="stat-value" id="totalEmployees">0</strong>
-          <span class="muted">Registered employees</span>
-        </article>
-
-        <article class="stat-card card">
-          <span class="stat-label">Checked In Today</span>
-          <strong class="stat-value" id="presentToday">0</strong>
-          <span class="muted">Attendance records</span>
-        </article>
-
-        <article class="stat-card card">
-          <span class="stat-label">Late Today</span>
-          <strong class="stat-value" id="lateToday">0</strong>
-          <span class="muted">Late arrivals</span>
-        </article>
-
-        <article class="stat-card card">
-          <span class="stat-label">On Leave Today</span>
-          <strong class="stat-value" id="onLeaveToday">0</strong>
-          <span class="muted">Approved leave</span>
-        </article>
-      </section>
-
-      <section class="dashboard-grid">
-        <article class="card">
-          <div class="section-heading">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Dashboard - HCM Lite</title>
+    <link rel="stylesheet" href="../css/style.css" />
+  </head>
+  <body>
+    <div class="app-container">
+      <aside class="sidebar" id="appSidebar">
+        <div class="sidebar-header">
+          <a href="admin.html" class="brand-badge">
+            <div class="brand-icon">⚡</div>
             <div>
-              <h2>Today's Attendance</h2>
-              <p class="muted">Attendance status for each employee.</p>
+              <div class="brand-text">HCM Lite</div>
+              <span class="brand-subtitle company-name-display">Acme Corp</span>
             </div>
-            <a href="employees.html" class="text-link">Employees</a>
+          </a>
+          <button type="button" class="sidebar-close-btn" id="sidebarCloseBtn">
+            &times;
+          </button>
+        </div>
+
+        <nav class="sidebar-nav">
+          <div class="nav-section-title">Main Menu</div>
+          <a href="admin.html" class="nav-item active">
+            <span class="icon">📊</span>
+            <span>Dashboard</span>
+          </a>
+          <a href="employees.html" class="nav-item">
+            <span class="icon">👥</span>
+            <span>Manage Employees</span>
+          </a>
+          <a href="leaves.html" class="nav-item">
+            <span class="icon">📅</span>
+            <span>Leave Requests</span>
+          </a>
+          <a href="payslip.html" class="nav-item">
+            <span class="icon">💰</span>
+            <span>Monthly Payslips</span>
+          </a>
+          <a href="settings.html" class="nav-item">
+            <span class="icon">⚙️</span>
+            <span>Company Settings</span>
+          </a>
+        </nav>
+
+        <div class="sidebar-footer">
+          <div class="user-profile-summary">
+            <div class="user-avatar" id="adminAvatar">AD</div>
+            <div class="user-info-text">
+              <div class="user-name" id="adminUserName">Administrator</div>
+              <div class="user-role-badge">System Admin</div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <div class="main-wrapper">
+        <header class="topbar">
+          <div class="topbar-left">
+            <button type="button" class="mobile-menu-btn" id="mobileMenuBtn">
+              ☰
+            </button>
+            <h1 class="page-title">Executive HR Dashboard</h1>
+          </div>
+          <div class="topbar-right">
+            <button
+              type="button"
+              class="btn btn-outline btn-sm theme-toggle-btn"
+            >
+              <span class="icon">🌙</span>
+              <span class="theme-text">Dark Mode</span>
+            </button>
+            <button type="button" class="btn btn-outline btn-sm logout-btn">
+              🚪 Sign Out
+            </button>
+          </div>
+        </header>
+
+        <main class="page-content">
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              flex-wrap: wrap;
+              gap: 1rem;
+              margin-bottom: 1.75rem;
+            "
+          >
+            <div>
+              <h2 style="font-size: 1.25rem; font-weight: 700">
+                Welcome, <span id="adminGreetingName">Admin</span> 👋
+              </h2>
+              <p style="font-size: 0.875rem; color: var(--text-muted)">
+                Real-time overview of your workforce, attendance, and leave
+                pipeline.
+              </p>
+            </div>
+            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap">
+              <a href="employees.html" class="btn btn-primary">
+                ➕ Add Employee
+              </a>
+              <a href="leaves.html" class="btn btn-secondary">
+                Review Leaves
+              </a>
+              <a href="payslip.html" class="btn btn-secondary">
+                Payroll Slips
+              </a>
+            </div>
           </div>
 
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Employee</th>
-                  <th>Department</th>
-                  <th>Check In</th>
-                  <th>Check Out</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody id="attendanceTableBody">
-                <tr class="empty-row">
-                  <td colspan="5">Loading attendance...</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </article>
-
-        <div class="side-stack">
-          <article class="card">
-            <div class="section-heading">
-              <div>
-                <h2>Pending Leave Requests</h2>
-                <p class="muted">Requests awaiting review.</p>
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-info">
+                <div class="stat-label">Total Employees</div>
+                <div class="stat-value" id="statTotalEmployees">0</div>
+                <div
+                  style="
+                    font-size: 0.75rem;
+                    color: var(--text-muted);
+                    margin-top: 0.35rem;
+                  "
+                  id="statActiveEmployeesSub"
+                >
+                  0 Active
+                </div>
               </div>
-              <a href="leaves.html" class="text-link">View all</a>
+              <div class="stat-icon primary">👥</div>
             </div>
 
-            <div id="pendingLeavesList" class="pending-leaves-list">
-              <p class="muted">Loading leave requests...</p>
+            <div class="stat-card">
+              <div class="stat-info">
+                <div class="stat-label">Present Today</div>
+                <div
+                  class="stat-value"
+                  id="statPresentToday"
+                  style="color: #10b981"
+                >
+                  0
+                </div>
+                <div
+                  style="
+                    font-size: 0.75rem;
+                    color: var(--text-muted);
+                    margin-top: 0.35rem;
+                  "
+                >
+                  On-time arrivals
+                </div>
+              </div>
+              <div class="stat-icon success">✓</div>
             </div>
-          </article>
 
-          <article class="card">
-            <div class="section-heading">
-              <div>
-                <h2>Attendance Trend</h2>
-                <p class="muted">Attendance records over the last 7 days.</p>
+            <div class="stat-card">
+              <div class="stat-info">
+                <div class="stat-label">Late Today</div>
+                <div
+                  class="stat-value"
+                  id="statLateToday"
+                  style="color: #f59e0b"
+                >
+                  0
+                </div>
+                <div
+                  style="
+                    font-size: 0.75rem;
+                    color: var(--text-muted);
+                    margin-top: 0.35rem;
+                  "
+                >
+                  Grace period exceeded
+                </div>
+              </div>
+              <div class="stat-icon warning">⚠️</div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-info">
+                <div class="stat-label">Half-Day Today</div>
+                <div
+                  class="stat-value"
+                  id="statHalfDayToday"
+                  style="color: #a855f7"
+                >
+                  0
+                </div>
+                <div
+                  style="
+                    font-size: 0.75rem;
+                    color: var(--text-muted);
+                    margin-top: 0.35rem;
+                  "
+                >
+                  After cutoff / partial shift
+                </div>
+              </div>
+              <div class="stat-icon purple">⏱️</div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-info">
+                <div class="stat-label">Pending Leaves</div>
+                <div
+                  class="stat-value"
+                  id="statPendingLeaves"
+                  style="color: #3b82f6"
+                >
+                  0
+                </div>
+                <div
+                  style="
+                    font-size: 0.75rem;
+                    color: var(--text-muted);
+                    margin-top: 0.35rem;
+                  "
+                >
+                  Awaiting decision
+                </div>
+              </div>
+              <div class="stat-icon primary">📅</div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-info">
+                <div class="stat-label">Monthly Payroll</div>
+                <div
+                  class="stat-value"
+                  id="statTotalPayroll"
+                  style="font-size: 1.45rem"
+                >
+                  $0.00
+                </div>
+                <div
+                  style="
+                    font-size: 0.75rem;
+                    color: var(--text-muted);
+                    margin-top: 0.35rem;
+                  "
+                >
+                  Active base commitment
+                </div>
+              </div>
+              <div class="stat-icon success">💵</div>
+            </div>
+          </div>
+
+          <div
+            style="
+              display: grid;
+              grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+              gap: 1.5rem;
+            "
+          >
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <h3 class="card-title">Today's Attendance</h3>
+                  <p class="card-subtitle">
+                    Real-time check-in and check-out activity for today
+                  </p>
+                </div>
+                <a href="employees.html" class="btn btn-outline btn-sm"
+                  >All Staff</a
+                >
+              </div>
+              <div class="card-body" style="padding: 0">
+                <div id="todayAttendanceContainer" class="table-responsive">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>Employee</th>
+                        <th>Check In</th>
+                        <th>Check Out</th>
+                        <th>Worked</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody id="todayAttendanceTableBody"></tbody>
+                  </table>
+                </div>
+                <div
+                  id="todayAttendanceEmptyState"
+                  class="empty-state"
+                  style="display: none"
+                >
+                  <div class="empty-state-icon">🕒</div>
+                  <div class="empty-state-title">
+                    No attendance records yet today
+                  </div>
+                  <p class="empty-state-text">
+                    When employees clock in from their self-service portal,
+                    their attendance and punctuality will appear here
+                    automatically.
+                  </p>
+                </div>
               </div>
             </div>
-            <div id="weekChart" class="week-chart" aria-label="Attendance records over the last seven days"></div>
-          </article>
-        </div>
-      </section>
 
-      <section class="card helper-card">
-        <div class="section-heading">
-          <div>
-            <h2>Smart HR Assistant</h2>
-            <p class="muted">Ask questions about your employee and attendance data.</p>
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <h3 class="card-title">Recent Leave Requests</h3>
+                  <p class="card-subtitle">
+                    Latest applications submitted by team members
+                  </p>
+                </div>
+                <a href="leaves.html" class="btn btn-outline btn-sm"
+                  >View All</a
+                >
+              </div>
+              <div class="card-body" style="padding: 0">
+                <div id="recentLeavesContainer" class="table-responsive">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>Employee</th>
+                        <th>Dates</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody id="recentLeavesTableBody"></tbody>
+                  </table>
+                </div>
+                <div
+                  id="recentLeavesEmptyState"
+                  class="empty-state"
+                  style="display: none"
+                >
+                  <div class="empty-state-icon">🏖️</div>
+                  <div class="empty-state-title">No leave requests found</div>
+                  <p class="empty-state-text">
+                    Employees have not submitted any leave requests yet. New
+                    requests will appear here for review.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+        </main>
+      </div>
+    </div>
 
-        <div class="helper-quick-questions">
-          <button type="button" class="btn btn-secondary btn-sm quick-question">How many employees do we have?</button>
-          <button type="button" class="btn btn-secondary btn-sm quick-question">Who is on leave today?</button>
-          <button type="button" class="btn btn-secondary btn-sm quick-question">Show late employees this month</button>
-        </div>
+    <script src="../js/storage.js"></script>
+    <script src="../js/auth.js"></script>
+    <script src="../js/attendance.js"></script>
+    <script src="../js/dashboard.js"></script>
+    <script src="../js/helper.js"></script>
 
-        <div id="helperMessages" class="helper-messages" aria-live="polite">
-          <p class="muted">Hello! Ask me about your HR data.</p>
-        </div>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        if (!AuthService.requireAuth("admin")) return;
 
-        <form id="helperForm" class="helper-form">
-          <label class="sr-only" for="helperInput">Ask the HR assistant</label>
-          <input id="helperInput" type="text" placeholder="Ask a question..." autocomplete="off" required>
-          <button type="submit" class="btn btn-primary">Ask</button>
-        </form>
-      </section>
+        const session = AuthService.getSession();
+        const company = StorageService.getCompany() || {};
 
-      <footer class="page-footer">
-        <p class="muted">HCM Lite · <span data-company-name>Company</span></p>
-      </footer>
-    </main>
-  </div>
-</body>
+        if (session) {
+          document.getElementById("adminGreetingName").textContent =
+            session.fullName;
+          document.getElementById("adminUserName").textContent =
+            session.fullName;
+          const initials = session.fullName
+            .split(" ")
+            .map((n) => n[0])
+            .join("")
+            .substring(0, 2)
+            .toUpperCase();
+          document.getElementById("adminAvatar").textContent = initials || "AD";
+        }
+
+        const companyDisplays = document.querySelectorAll(
+          ".company-name-display",
+        );
+        companyDisplays.forEach(
+          (el) => (el.textContent = company.companyName || "Acme Corp"),
+        );
+
+        DashboardModule.init();
+
+        const mobileBtn = document.getElementById("mobileMenuBtn");
+        const sidebarCloseBtn = document.getElementById("sidebarCloseBtn");
+        const sidebar = document.getElementById("appSidebar");
+
+        mobileBtn?.addEventListener("click", () =>
+          sidebar.classList.add("open"),
+        );
+        sidebarCloseBtn?.addEventListener("click", () =>
+          sidebar.classList.remove("open"),
+        );
+      });
+    </script>
+  </body>
 </html>
